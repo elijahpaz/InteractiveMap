@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { NODES } from '../data/network.js'
 import { remainingMiles } from '../lib/geo.js'
 import { candidateMoves } from '../lib/dispatch.js'
+import { usd } from '../lib/economics.js'
 import { scheduleLabel } from '../lib/gates.js'
 import {
   CHASSIS_STATUS,
@@ -171,6 +172,15 @@ function Recommendations({ truck, containers, congestion, day, onSelect }) {
             <span className="rec__box">{m.container.id}</span>
             <span className="rec__where">
               {m.terminal.label} · {m.deadheadMi.toFixed(1)} mi
+              {m.economics && (
+                <span
+                  className={`rec__margin ${
+                    m.economics.margin < 120 ? 'is-thin' : ''
+                  }`}
+                >
+                  {usd(m.economics.margin)}
+                </span>
+              )}
             </span>
           </span>
           <span className="rec__reasons">
@@ -183,8 +193,9 @@ function Recommendations({ truck, containers, congestion, day, onSelect }) {
         </button>
       ))}
       <p className="recs__note">
-        Ranked by free time remaining, then gate time, then deadhead. Blocked
-        options are kept so you can see why.
+        Ranked by free time remaining, then gate time, then deadhead. Dollar
+        figures are gross contribution on placeholder rates. Blocked options are
+        kept so you can see why.
       </p>
     </section>
   )

@@ -33,6 +33,42 @@ Both are simplified with Douglas-Peucker for payload size. OSM still files three
 POLA terminals under legacy tenant names — *China Shipping* and *Yang Ming* for
 the two WBCT terminals, *Evergreen* for Everport.
 
+## The five numbers
+
+You can't argue for a tool like this on features. The **Scorecard** panel tracks
+the five measures the business case actually rests on, computed from live state
+rather than stored, so there's nowhere to quietly fudge them:
+
+| Metric | Why it's here |
+| --- | --- |
+| Avg turn time | Gate time across open terminals. Every minute is paid and earns nothing. |
+| Driver utilisation | Share of on-duty time rolling rather than queued or held. |
+| Deadhead miles | Miles with nothing on the chassis. Pure cost, no revenue. |
+| Accessorials at risk | Demurrage, detention and idle equipment accruing or one day away. |
+| Contribution / load | Average across loads in progress, before fixed fleet costs. |
+
+They move together the way they should. Across one simulated day:
+
+| Time | Turn time | Utilisation | Contribution/load |
+| --- | --- | --- | --- |
+| 08:42 | 106m | 89% | $336 |
+| 11:30 | 95m | 60% | $332 |
+| 14:17 | 104m | **67%** | **$263** |
+| 17:06 | 76m | 86% | **$364** |
+| 19:54 | 67m | 73% | $360 |
+
+Congestion lengthens dwell, dwell drops utilisation, and contribution per load
+falls with it — $101 of a $267 load contribution disappears into a three-hour
+gate queue. That chain is the argument, and it is why gate time is weighted so
+heavily in dispatch scoring.
+
+**Every rate is a placeholder.** They're plausible for LA/Long Beach and they're
+not yours — rates are negotiated per customer and lane, driver pay differs by
+company vs owner-operator, accessorial schedules vary by terminal and line. They
+sit in one `ASSUMPTIONS` object at the top of `lib/economics.js` for exactly that
+reason. `margin` is gross contribution, not profit: tractor payments, insurance
+and yard rent sit below it.
+
 ## Recommendations
 
 Diagnosing isn't enough — the app now says what to do instead.
@@ -190,6 +226,7 @@ src/
   lib/
     congestion.js  the congestion model, and the seam to a real feed
     dispatch.js    scoring for what to do next, and where to send a truck instead
+    economics.js   cost, revenue and the five numbers — all rates in one place
     exceptions.js  the rules that decide what's worth flagging
     gates.js       gate open/closed state, and whether a truck makes the window
     routing.js     composes corridors into legs and three-leg tours
@@ -228,6 +265,7 @@ The seams are deliberate:
 | Gate congestion | `lib/congestion.js` → `congestionFor` | Return live figures in the same shape |
 | Gate hours | `data/gateSchedules.js` | Replace the windows; the structure already fits |
 | Dispatch weights | `lib/dispatch.js` → `WEIGHT` | Retune against your real cost per hour and per mile |
+| Rates and costs | `lib/economics.js` → `ASSUMPTIONS` | Drop in your rate sheet; everything downstream follows |
 
 Demo data uses `lfdOffsetDays` (days relative to today) rather than fixed dates
 so the risk colours stay meaningful whenever you open it.
@@ -247,6 +285,7 @@ worse than obviously fake data — which is why the app carries a dismissible
 | | Gate hours, turn times, appointment flags |
 | | **All congestion figures and time estimates** |
 | | **All gate hours** (the schedule *structure* is real) |
+| | **All rates, costs and dollar figures** |
 
 Anything under a `demo` key, and everything in `YARDS` / `CLIENTS`, is a
 placeholder. The client companies are invented names on real street names — they

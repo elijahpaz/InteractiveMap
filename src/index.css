@@ -1415,3 +1415,115 @@ body {
   border-left: 2px solid #22c55e;
   border-radius: 0 5px 5px 0;
 }
+
+/* ---------------------------------------------------------------------------
+   Scorecard — the business case, kept apart from the operational KPI strip.
+--------------------------------------------------------------------------- */
+
+.scorecard {
+  top: 12px;
+  left: 12px;
+  width: 236px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+
+.metric {
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.metric:last-of-type {
+  border-bottom: 0;
+}
+
+.metric__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.metric__label {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.metric__value {
+  font-size: 16px;
+  font-weight: 640;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric--good .metric__value { color: #22c55e; }
+.metric--warn .metric__value { color: #f59e0b; }
+.metric--bad .metric__value { color: #ef4444; }
+
+.metric__note {
+  margin: 3px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.metric__toggle {
+  margin-top: 5px;
+  padding: 0;
+  font: inherit;
+  font-size: 10px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.metric__breakdown {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  list-style: none;
+  background: var(--surface-2);
+  border-radius: 6px;
+}
+
+.metric__breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.metric__breakdown li span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.scorecard__note {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  border-top: 1px solid var(--line);
+}
+
+.scorecard__note code {
+  font-size: 9.5px;
+  padding: 0 3px;
+  background: var(--surface-2);
+  border-radius: 3px;
+}
+
+.rec__margin {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid var(--line);
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  color: #22c55e;
+}
+
+.rec__margin.is-thin {
+  color: #f59e0b;
+}

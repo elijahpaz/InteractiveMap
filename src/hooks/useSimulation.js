@@ -3,6 +3,7 @@ import { TRUCKS } from '../data/fleet.js'
 import { NODES } from '../data/network.js'
 import { bearingAtProgress, pathLength, pointAtProgress } from '../lib/geo.js'
 import { TRUCK_STATUS } from '../lib/status.js'
+import { congestionFor } from '../lib/congestion.js'
 
 // Stands in for a live telematics feed. Trucks roll along their tour geometry
 // on a clock, dwell at each stop for as long as that stop usually takes, then
@@ -22,14 +23,20 @@ function legMinutes(geometry) {
 }
 
 /**
- * How long a unit sits at a stop before it can leave. Terminals use their own
- * turn time and clients their average detention, so congested nodes visibly
- * hold trucks longer than efficient ones.
+ * How long a unit sits at a stop before it can leave.
+ *
+ * Terminals dwell for as long as the gate is *currently* taking, not their
+ * baseline turn time. Without this, congestion was decoration: the map could
+ * show a three-hour queue while trucks still departed on the terminal's best-
+ * case number, so nothing downstream — utilisation, contribution, the gate
+ * warnings — reflected it. Clients use their own detention norm.
  */
-function dwellTargetMin(nodeId) {
+function dwellTargetMin(nodeId, clockMin = 0) {
   const node = NODES[nodeId]
   if (!node) return YARD_DWELL_MIN
-  if (node.turnTimeMin != null) return node.turnTimeMin
+  if (node.turnTimeMin != null) {
+    return congestionFor(nodeId, clockMin)?.turnMin ?? node.turnTimeMin
+  }
   if (node.avgDetentionMin != null) return node.avgDetentionMin
   return YARD_DWELL_MIN
 }
@@ -51,6 +58,9 @@ export function useSimulation() {
   const [day, setDay] = useState(2) // Tuesday — a normal working day
   const [motion, setMotion] = useState(initialState)
   const lastTickRef = useRef(null)
+  // The tick runs inside a closure, so the clock is mirrored in a ref to keep
+  // the dwell lookup from reading a stale value.
+  const clockRef = useRef(8 * 60 + 20)
 
   // Leg durations depend only on static geometry, so compute them once.
   const legMinutesByTruck = useMemo(
@@ -65,6 +75,7 @@ export function useSimulation() {
     setMotion(initialState())
     setClockMin(8 * 60 + 20)
     setDay(2)
+    clockRef.current = 8 * 60 + 20
     lastTickRef.current = null
   }, [])
 
@@ -88,7 +99,8 @@ export function useSimulation() {
         const next = c + simMinutes
         // Roll the weekday over at midnight so gate schedules actually cycle.
         if (next >= 24 * 60) setDay((d) => (d + 1) % 7)
-        return next % (24 * 60)
+        clockRef.current = next % (24 * 60)
+        return clockRef.current
       })
       setMotion((current) =>
         current.map((m) => {
@@ -109,7 +121,7 @@ export function useSimulation() {
           // Parked: accrue dwell, and depart once the stop's normal time is up.
           const dwellMin = m.dwellMin + simMinutes
           const stopId = legs[m.leg].to
-          if (dwellMin < dwellTargetMin(stopId)) return { ...m, dwellMin }
+          if (dwellMin < dwellTargetMin(stopId, clockRef.current)) return { ...m, dwellMin }
 
           const nextLeg = (m.leg + 1) % legs.length
           return {
@@ -148,13 +160,13 @@ export function useSimulation() {
           status: m.status,
           progress: m.progress,
           dwellMin: m.dwellMin,
-          dwellTargetMin: dwellTargetMin(route.to),
+          dwellTargetMin: dwellTargetMin(route.to, clockMin),
           position,
           heading: bearingAtProgress(route.geometry, m.progress),
           legMinutes: legMinutesByTruck[truck.id]?.[m.leg] ?? 60,
         }
       }),
-    [motion, legMinutesByTruck]
+    [motion, legMinutesByTruck, clockMin]
   )
 
   return { trucks, playing, setPlaying, speed, setSpeed, clockMin, day, reset }

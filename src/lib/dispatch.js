@@ -1,6 +1,7 @@
 import { CHASSIS } from '../data/equipment.js'
 import { NODES } from '../data/network.js'
 import { CONTAINER_TERMINALS, TERMINAL_BY_ID } from '../data/terminals.js'
+import { moveEconomics } from './economics.js'
 import { haversine } from './geo.js'
 
 /**
@@ -123,6 +124,14 @@ export function scoreMove(truck, container, congestion, day) {
     (gateMin ?? 240) * WEIGHT.gateTime -
     deadheadMi * WEIGHT.deadhead
 
+  // What the move is worth, so the ranking can be sanity-checked in money
+  // rather than taken on faith from a weighted score.
+  const economics = moveEconomics({
+    miles: deadheadMi,
+    driveMin,
+    gateMin: gateMin ?? 0,
+  })
+
   return {
     container,
     terminal,
@@ -132,6 +141,7 @@ export function scoreMove(truck, container, congestion, day) {
     driveMin,
     gateMin,
     totalMin: gateMin == null ? null : totalMin,
+    economics,
     reasons,
   }
 }

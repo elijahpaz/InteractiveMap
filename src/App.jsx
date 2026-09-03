@@ -3,6 +3,7 @@ import DetailPanel from './components/DetailPanel.jsx'
 import KpiBar from './components/KpiBar.jsx'
 import LayerControl from './components/LayerControl.jsx'
 import MapView from './components/MapView.jsx'
+import Scorecard from './components/Scorecard.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { CHASSIS, CONTAINERS } from './data/equipment.js'
 import { NODES } from './data/network.js'
@@ -37,6 +38,7 @@ export default function App() {
 
   const [harborFocusKey, setHarborFocusKey] = useState(0)
   const [demoNoticeOpen, setDemoNoticeOpen] = useState(true)
+  const [scorecardOpen, setScorecardOpen] = useState(false)
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
   const [theme, setTheme] = useState('dark')
   const [showCompleted, setShowCompleted] = useState(false)
@@ -117,6 +119,14 @@ export default function App() {
         </div>
 
         <div className="topbar__controls">
+          <button
+            type="button"
+            className={`ctrl ${scorecardOpen ? 'is-on' : ''}`}
+            onClick={() => setScorecardOpen((v) => !v)}
+          >
+            Scorecard
+          </button>
+
           <button
             type="button"
             className="ctrl"
@@ -212,6 +222,15 @@ export default function App() {
             day={day}
             harborFocusKey={harborFocusKey}
           />
+
+          {scorecardOpen && (
+            <Scorecard
+              trucks={trucks}
+              containers={containers}
+              congestion={congestion}
+              onClose={() => setScorecardOpen(false)}
+            />
+          )}
 
           <LayerControl
             layers={layers}

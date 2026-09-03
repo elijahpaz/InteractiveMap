@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { NODES } from '../data/network.js'
 import { remainingMiles } from '../lib/geo.js'
+import { candidateMoves } from '../lib/dispatch.js'
 import { scheduleLabel } from '../lib/gates.js'
 import {
   CHASSIS_STATUS,
@@ -45,7 +47,7 @@ function Header({ eyebrow, title, badge, badgeColor, onClose }) {
   )
 }
 
-function TruckDetail({ truck, container, chassis, onSelect, onClose }) {
+function TruckDetail({ truck, container, chassis, containers, congestion, day, onSelect, onClose }) {
   const meta = TRUCK_STATUS[truck.status]
   const milesLeft = remainingMiles(truck.route.geometry, truck.progress)
   const minutesLeft = truck.legMinutes * (1 - truck.progress)
@@ -93,6 +95,14 @@ function TruckDetail({ truck, container, chassis, onSelect, onClose }) {
         <Field label="Progress" value={`${Math.round(truck.progress * 100)}%`} />
       </div>
 
+      <Recommendations
+        truck={truck}
+        containers={containers}
+        congestion={congestion}
+        day={day}
+        onSelect={onSelect}
+      />
+
       <div className="detail__links">
         {container ? (
           <button
@@ -133,6 +143,50 @@ function TruckDetail({ truck, container, chassis, onSelect, onClose }) {
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * What this unit should go get next. Ranked, with the reasoning shown — a
+ * dispatcher has to be able to disagree with it, which needs the "why".
+ */
+function Recommendations({ truck, containers, congestion, day, onSelect }) {
+  const moves = useMemo(
+    () => candidateMoves(truck, containers ?? [], congestion, day, 3),
+    [truck, containers, congestion, day]
+  )
+  if (moves.length === 0) return null
+
+  return (
+    <section className="recs">
+      <h3 className="recs__title">Recommended next pull</h3>
+      {moves.map((m) => (
+        <button
+          key={m.container.id}
+          type="button"
+          className={`rec ${m.feasible ? '' : 'is-blocked'}`}
+          onClick={() => onSelect({ type: 'container', id: m.container.id })}
+        >
+          <span className="rec__head">
+            <span className="rec__box">{m.container.id}</span>
+            <span className="rec__where">
+              {m.terminal.label} · {m.deadheadMi.toFixed(1)} mi
+            </span>
+          </span>
+          <span className="rec__reasons">
+            {m.reasons.map((r, i) => (
+              <span key={i} className={`rec__tag rec__tag--${r.kind}`}>
+                {r.text}
+              </span>
+            ))}
+          </span>
+        </button>
+      ))}
+      <p className="recs__note">
+        Ranked by free time remaining, then gate time, then deadhead. Blocked
+        options are kept so you can see why.
+      </p>
+    </section>
   )
 }
 
@@ -392,6 +446,9 @@ export default function DetailPanel({
           truck={truck}
           container={containers.find((c) => c.id === truck.containerId)}
           chassis={chassis.find((c) => c.id === truck.chassisId)}
+          containers={containers}
+          congestion={congestion}
+          day={day}
           onSelect={onSelect}
           onClose={onClose}
         />

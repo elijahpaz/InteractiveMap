@@ -33,6 +33,41 @@ Both are simplified with Douglas-Peucker for payload size. OSM still files three
 POLA terminals under legacy tenant names — *China Shipping* and *Yang Ming* for
 the two WBCT terminals, *Evergreen* for Everport.
 
+## Recommendations
+
+Diagnosing isn't enough — the app now says what to do instead.
+
+**Per truck.** Select a unit and the detail panel ranks its next pulls, with the
+reasoning shown rather than a bare score:
+
+```
+FCIU8830022    226 · 6.1 mi
+[1d into demurrage] [Moderate gate, 114m to clear]
+```
+
+Ranked by free time remaining, then gate time, then deadhead. Those weights
+encode a claim worth arguing with once real numbers exist: demurrage dominates
+(a day of it outweighs the fuel on any deadhead in this basin), queue time is
+the scarce resource (a driver stuck three hours isn't doing a second turn), and
+distance matters least of the three — it's the cost dispatchers over-weight by
+eye, because it's the one they can see.
+
+Infeasible moves are **kept and marked**, not hidden. A recommendation that
+silently drops the option you were about to take is worse than one that explains
+why it's a bad idea.
+
+**Per exception.** Findings that have a fix carry it:
+
+> **Driving to a shut gate** — Unit 160
+> L. Ibrahim is 11.6 mi out from Everport Terminal Services, ETA 18m. Gate shuts in 9m.
+> → *Try Long Beach Container Terminal instead — 4.2 mi direct, moderate gate,
+> about 1h 1m to drive and clear against 9h 9m of gate left.*
+
+The bar for an alternative is that the truck can **arrive and get through**,
+not merely arrive. A gate closing in nine minutes is no use to a driver nine
+minutes away — they'd burn the trip twice. When nothing qualifies, the honest
+answer is to hold the driver, and it says that.
+
 ## Exceptions
 
 The **Alerts** tab is the point of the whole thing. Rather than showing
@@ -154,6 +189,7 @@ src/
     equipment.js   containers and chassis
   lib/
     congestion.js  the congestion model, and the seam to a real feed
+    dispatch.js    scoring for what to do next, and where to send a truck instead
     exceptions.js  the rules that decide what's worth flagging
     gates.js       gate open/closed state, and whether a truck makes the window
     routing.js     composes corridors into legs and three-leg tours
@@ -191,6 +227,7 @@ The seams are deliberate:
 | Demurrage clocks | `lib/status.js` → `demurrageRisk` | Feed real last-free-day dates in place of `lfdOffsetDays` |
 | Gate congestion | `lib/congestion.js` → `congestionFor` | Return live figures in the same shape |
 | Gate hours | `data/gateSchedules.js` | Replace the windows; the structure already fits |
+| Dispatch weights | `lib/dispatch.js` → `WEIGHT` | Retune against your real cost per hour and per mile |
 
 Demo data uses `lfdOffsetDays` (days relative to today) rather than fixed dates
 so the risk colours stay meaningful whenever you open it.
@@ -198,7 +235,8 @@ so the risk colours stay meaningful whenever you open it.
 ### What is real and what is not
 
 This matters more than usual here, because plausible-looking operational data is
-worse than obviously fake data. The split:
+worse than obviously fake data — which is why the app carries a dismissible
+**Demo data** notice at the top rather than burying the caveat here. The split:
 
 | Real | Invented |
 | --- | --- |

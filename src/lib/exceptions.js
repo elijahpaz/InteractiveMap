@@ -2,6 +2,7 @@ import { CHASSIS } from '../data/equipment.js'
 import { NODES } from '../data/network.js'
 import { DAY_SHORT, GATE_SCHEDULES } from '../data/gateSchedules.js'
 import { TERMINAL_BY_ID } from '../data/terminals.js'
+import { nearestOpenTerminal } from './dispatch.js'
 import { remainingMiles } from './geo.js'
 import { formatDuration } from './status.js'
 
@@ -140,6 +141,8 @@ export function findExceptions({ trucks, containers, congestion, day }) {
       if (load) {
         const arrivesAfterClose = load.closed || etaMin > load.gate.closesInMin
         if (arrivesAfterClose) {
+          // Saying "reroute" without saying where is only half an answer.
+          const alt = nearestOpenTerminal(truck.position, congestion, truck.route.to)
           add({
             id: `gate-${truck.id}`,
             severity: 'critical',
@@ -151,7 +154,14 @@ export function findExceptions({ trucks, containers, congestion, day }) {
               load.closed
                 ? `Gate closed until ${load.gate.nextOpenLabel}.`
                 : `Gate shuts in ${formatDuration(load.gate.closesInMin)}.`
-            } Reroute or the trip is wasted.`,
+            }`,
+            fix: alt
+              ? `Try ${alt.terminal.name} instead — ${alt.miles.toFixed(1)} mi direct, ${
+                  alt.load.level.label.toLowerCase()
+                } gate, about ${formatDuration(alt.totalMin)} to drive and clear against ${formatDuration(
+                  alt.load.gate.closesInMin
+                )} of gate left.`
+              : 'No terminal in the complex can still be driven to and cleared before close — hold the driver or re-plan for the next gate.',
             subject: { type: 'truck', id: truck.id },
           })
         }

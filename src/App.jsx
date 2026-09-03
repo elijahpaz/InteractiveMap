@@ -36,6 +36,7 @@ export default function App() {
   const { trucks, playing, setPlaying, speed, setSpeed, clockMin, day, reset } = useSimulation()
 
   const [harborFocusKey, setHarborFocusKey] = useState(0)
+  const [demoNoticeOpen, setDemoNoticeOpen] = useState(true)
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
   const [theme, setTheme] = useState('dark')
   const [showCompleted, setShowCompleted] = useState(false)
@@ -92,7 +93,7 @@ export default function App() {
   }, [selected, containers])
 
   return (
-    <div className={`app app--${theme}`}>
+    <div className={`app app--${theme} ${demoNoticeOpen ? 'app--notice' : ''}`}>
       <header className="topbar">
         <div className="topbar__brand">
           <span className="topbar__mark" aria-hidden="true">
@@ -156,6 +157,28 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* This looks enough like a real operations tool that the distinction has
+          to be on screen, not only in the README. */}
+      {demoNoticeOpen && (
+        <div className="demoNotice">
+          <span className="demoNotice__tag">Demo data</span>
+          <p>
+            Terminal names, operators, berths and boundaries are real, from the
+            two port authorities. <strong>Everything operational is simulated</strong>{' '}
+            — the fleet, drivers, containers, chassis, client companies, and all
+            congestion, gate hours and time estimates. Nothing here is a live feed.
+          </p>
+          <button
+            type="button"
+            className="demoNotice__close"
+            onClick={() => setDemoNoticeOpen(false)}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <KpiBar
         trucks={trucks}

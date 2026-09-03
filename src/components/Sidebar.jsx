@@ -142,6 +142,7 @@ export default function Sidebar({ trucks, containers, chassis, exceptions, selec
                   <span className="alertRow__title">{e.title}</span>
                 </span>
                 <span className="alertRow__detail">{e.detail}</span>
+                {e.fix && <span className="alertRow__fix">{e.fix}</span>}
               </button>
             )
           })}

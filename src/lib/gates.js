@@ -153,3 +153,69 @@ export function gateSuccessFor(terminalId) {
     meaning: polaSuccess.meaning,
   }
 }
+
+/* ── One colour, whatever the port publishes ────────────────────────────────
+ *
+ * The two ports measure different things, but a dispatcher looking at the map
+ * is asking one question: how easily can I get into this terminal today? This
+ * collapses whatever each port actually publishes into a single five-level
+ * scale so the map reads at a glance, and always reports which measure it used
+ * so nobody mistakes one port's signal for the other's.
+ *
+ * Long Beach publishes shifts worked. More shifts is more capacity, which is
+ * the closest honest reading of "how congested" from a gate calendar — it is
+ * capacity offered, not queue length, and is labelled that way.
+ *
+ * Los Angeles publishes appointment fulfilment, which is a direct measure of a
+ * terminal failing to take the trucks booked for it.
+ */
+
+export const ACCESS_LEVELS = {
+  good: { label: 'Running well', color: '#22c55e', rank: 0 },
+  fair: { label: 'Some pressure', color: '#eab308', rank: 1 },
+  poor: { label: 'Struggling', color: '#f97316', rank: 2 },
+  shut: { label: 'No gate today', color: '#ef4444', rank: 3 },
+  unknown: { label: 'Not published', color: '#64748b', rank: 4 },
+}
+
+export function terminalAccess(terminalId, dateISO) {
+  // Long Beach: how many shifts the terminal is working today.
+  const gate = gateStatusFor(terminalId, dateISO)
+  if (gate.known) {
+    const open = Object.values(gate.shifts).filter((v) => v === 'Open').length
+    const level = open >= 2 ? 'good' : open === 1 ? 'fair' : gate.unposted ? 'unknown' : 'shut'
+    return {
+      ...ACCESS_LEVELS[level],
+      level,
+      basis: 'shifts',
+      detail: `${open} of ${Object.keys(gate.shifts).length} shifts open`,
+      shifts: gate.shifts,
+      source: 'Port of Long Beach gate calendar',
+      asOf: dateISO,
+    }
+  }
+
+  // Los Angeles: how much of what was booked actually got through.
+  const success = gateSuccessFor(terminalId)
+  if (success.known) {
+    const level =
+      success.pct >= 95 ? 'good' : success.pct >= 70 ? 'fair' : 'poor'
+    return {
+      ...ACCESS_LEVELS[level],
+      level,
+      basis: 'appointments',
+      detail: `${success.pct}% of booked appointments fulfilled`,
+      pct: success.pct,
+      allTerminals: success.allTerminals,
+      source: 'Port of Los Angeles appointment fulfilment',
+      asOf: success.dataDate,
+    }
+  }
+
+  return { ...ACCESS_LEVELS.unknown, level: 'unknown', basis: 'none', detail: gate.reason }
+}
+
+/** Days between the Long Beach capture and now, for an honest staleness note. */
+export function captureAgeDays(now = new Date()) {
+  return Math.max(0, Math.floor((now - new Date(GATE_CAPTURED_AT)) / 86400000))
+}

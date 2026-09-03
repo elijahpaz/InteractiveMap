@@ -1632,3 +1632,20 @@ body {
   font-weight: 400;
   color: var(--text-faint);
 }
+
+/* One reading per terminal, and the note that says where it came from. */
+.gatePopup__detail {
+  margin: 7px 0 0;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--text);
+}
+
+.legend__foot {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  border-top: 1px solid var(--line);
+}

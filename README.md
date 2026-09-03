@@ -177,15 +177,54 @@ schedule; neither is interesting alone:
 
 Every rule reads state the app already holds — no rule needs data we don't have.
 
-## Refreshing the published data
+## One colour, from each port's own figures
+
+Every terminal carries a single reading — **Running well / Some pressure /
+Struggling / No gate today / Not published** — and there is one legend and no
+toggle for it. Click a terminal and it tells you which measure produced the
+colour, because the two ports publish different things:
+
+- **Long Beach** → shifts worked today. Two shifts is more capacity than one.
+  That is capacity offered, **not** queue length, and the popup says so.
+- **Los Angeles** → share of booked appointments actually fulfilled. A terminal
+  at 17% could not take four of every five trucks booked for it.
+
+Neither measure is filled in for the other port, and neither is called
+"congestion" — they are labelled as what they are.
+
+## How fresh is it, really
+
+| Source | Refresh | Why |
+| --- | --- | --- |
+| **LA appointment fulfilment** | **Automatic, weekday** | Published as a plain PDF that can be fetched directly |
+| **LB gate calendar** | **Manual** | See below |
+
+`.github/workflows/refresh-port-data.yml` pulls the LA figures each weekday and
+commits any change, which triggers the normal Pages deploy. No server needed.
+
+**Long Beach cannot be automated, and this project does not try to force it.**
+Three routes exist and two are closed:
+
+1. `api.bluecargo.io/core/api/gate_schedules/` — the endpoint POLB's own page
+   calls. Returns **401** without a commercial BlueCargo key.
+2. Scraping `polb.com` — returns **403** to any automated request, including a
+   real headless Chromium with a browser user agent. That is Akamai bot
+   protection, deliberately configured by the port. Defeating it is not
+   something this project does.
+3. Opening the page in a browser and capturing the table — which is a person
+   reading a public page, and is how the committed snapshot was made.
+
+So the Long Beach calendar is a dated snapshot. The app shows its capture date
+and how many days old it is, and **refuses to answer for dates outside the
+window it holds** rather than extrapolating.
+
+To make Long Beach genuinely live, get a BlueCargo key or ask the Port of Long
+Beach for feed access, then replace `src/data/polbGateCalendar.js` from that
+source — everything downstream reads the same shape.
 
 ```bash
-python3 scripts/fetch_pola_gate_success.py
+python3 scripts/fetch_pola_gate_success.py   # LA, works today
 ```
-
-The Long Beach calendar was captured by hand from a client-rendered page and
-covers a fixed window; the app refuses to answer for dates outside it rather than
-extrapolating.
 
 ## Running it
 

@@ -1,4 +1,4 @@
-import { CHASSIS_STATUS, TRUCK_STATUS } from '../lib/status.js'
+import { ACCESS_LEVELS, GATE_CAPTURED_AT, captureAgeDays } from '../lib/gates.js'
 
 const LAYERS = [
   { id: 'fleet', label: 'Fleet', swatch: '#4f9cf9' },
@@ -44,77 +44,23 @@ export default function LayerControl({ layers, onToggle, showCompleted, onToggle
       </label>
 
       <div className="legend">
-        <p className="legend__title">Truck status</p>
+        <p className="legend__title">Gate access today</p>
         <ul>
-          {Object.entries(TRUCK_STATUS).map(([key, meta]) => (
-            <li key={key}>
-              <span className="legend__dot" style={{ background: meta.color }} />
-              {meta.label}
-            </li>
-          ))}
+          {Object.entries(ACCESS_LEVELS)
+            .sort(([, a], [, b]) => a.rank - b.rank)
+            .map(([key, meta]) => (
+              <li key={key}>
+                <span className="legend__dot" style={{ background: meta.color }} />
+                {meta.label}
+              </li>
+            ))}
         </ul>
-
-        <p className="legend__title">Chassis</p>
-        <ul>
-          {Object.entries(CHASSIS_STATUS).map(([key, meta]) => (
-            <li key={key}>
-              <span className="legend__dot" style={{ background: meta.color }} />
-              {meta.label}
-            </li>
-          ))}
-        </ul>
-
-        <p className="legend__title">LA — appointments fulfilled</p>
-        <ul>
-          <li>
-            <span className="legend__dot" style={{ background: '#22c55e' }} />
-            95%+ keeping up
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#eab308' }} />
-            75-94% mostly keeping up
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#f97316' }} />
-            50-74% falling behind
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#ef4444' }} />
-            Under 50% badly behind
-          </li>
-        </ul>
-
-        <p className="legend__title">Long Beach — gate</p>
-        <ul>
-          <li>
-            <span className="legend__dot" style={{ background: '#3fa89a' }} />
-            Open shift published
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#64748b' }} />
-            No open shift published
-          </li>
-        </ul>
-
-        <p className="legend__title">Container box colour</p>
-        <ul>
-          <li>
-            <span className="legend__dot" style={{ background: '#ef4444' }} />
-            Demurrage accruing
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#f97316' }} />
-            Last free day today
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#f59e0b' }} />
-            LFD within 2 days
-          </li>
-          <li>
-            <span className="legend__dot" style={{ background: '#22c55e' }} />
-            Clear
-          </li>
-        </ul>
+        <p className="legend__foot">
+          Long Beach publishes shifts worked; Los Angeles publishes appointment
+          fulfilment. Each terminal is shaded by its own port's figure — click one
+          to see which. Long Beach data captured {GATE_CAPTURED_AT.slice(0, 10)}
+          {captureAgeDays() > 0 ? `, ${captureAgeDays()}d ago` : ' (today)'}.
+        </p>
       </div>
     </div>
   )

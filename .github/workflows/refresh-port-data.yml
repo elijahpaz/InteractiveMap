@@ -1,0 +1,44 @@
+name: Refresh published port data
+
+# Los Angeles posts appointment fulfilment as a plain PDF that can be fetched
+# directly, so it refreshes itself here each weekday. The commit this produces
+# triggers the normal Pages deploy.
+#
+# Long Beach is NOT refreshed here, and cannot be. Its gate calendar is rendered
+# client-side from api.bluecargo.io, which returns 401 without a commercial key,
+# and polb.com itself returns 403 to any automated request including a real
+# headless browser. Defeating that protection is not something this project
+# does. The Long Beach calendar is therefore captured by hand — see the README —
+# and the app displays how old the capture is rather than implying it is live.
+on:
+  schedule:
+    - cron: '0 15 * * 1-5' # 08:00 Pacific, weekdays
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-port-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Los Angeles appointment fulfilment
+        run: python3 scripts/fetch_pola_gate_success.py
+
+      - name: Commit if the published figures moved
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/polaGateSuccess.js
+          if git diff --staged --quiet; then
+            echo "No change in published data."
+          else
+            git commit -m "Refresh Los Angeles appointment fulfilment"
+            git push
+          fi

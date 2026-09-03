@@ -12,13 +12,7 @@ import {
 } from 'react-leaflet'
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
 import { HARBOR_BOUNDS, PORTS, TERMINAL_BY_ID } from '../data/terminals.js'
-import {
-  GATE_CAPTURED_AT,
-  POLA_SUCCESS_DATE,
-  gateStatusFor,
-  gateSuccessFor,
-  shiftSummary,
-} from '../lib/gates.js'
+import { terminalAccess } from '../lib/gates.js'
 import { spreadPosition } from '../lib/geo.js'
 import {
   chassisIcon,
@@ -186,17 +180,9 @@ export default function MapView({
           const active = isSelected('terminal', terminal.id)
           // Published gate state, or nothing. Terminals with no feed are drawn
           // in their port colour and say so — never shaded as if we knew.
-          const gate = gateStatusFor(terminal.id, dateISO)
-          const success = gateSuccessFor(terminal.id)
-          const portColor = PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
-          // Long Beach publishes whether the gate is open; Los Angeles publishes
-          // how well it is coping. Each terminal is shaded by whichever its own
-          // port actually reports, and by port colour when neither applies.
-          const fill = gate.known && !gate.anyOpen
-            ? '#64748b'
-            : success.known
-              ? success.band.color
-              : portColor
+          // One reading per terminal, from whatever its own port publishes.
+          const access = terminalAccess(terminal.id, dateISO)
+          const fill = access.color
 
           return (
             <Polygon
@@ -209,8 +195,8 @@ export default function MapView({
                 fillColor: fill,
                 // A shut gate is drawn back and dashed — it should not read as
                 // somewhere a truck can be sent right now.
-                fillOpacity: showShapes ? (active ? 0.9 : gate.known && !gate.anyOpen ? 0.3 : 0.6) : 0,
-                dashArray: gate.known && !gate.anyOpen ? '4 4' : null,
+                fillOpacity: showShapes ? (active ? 0.9 : access.level === 'unknown' ? 0.28 : 0.66) : 0,
+                dashArray: access.level === 'unknown' || access.level === 'shut' ? '4 4' : null,
               }}
               eventHandlers={{ click: () => onSelect({ type: 'terminal', id: terminal.id }) }}
             >
@@ -220,56 +206,40 @@ export default function MapView({
                   <h4 className="gatePopup__name">{terminal.name}</h4>
                   <p className="gatePopup__berths">{terminal.berth}</p>
 
-                  {gate.known ? (
-                    <>
-                      <div
-                        className={`gatePopup__level ${
-                          gate.anyOpen ? '' : 'gatePopup__level--shut'
-                        }`}
-                        style={{ '--load': gate.anyOpen ? '#22c55e' : '#ef4444' }}
-                      >
-                        <span className="gatePopup__dot" />
-                        {gate.anyOpen ? 'Gate open today' : 'No open shift today'}
-                      </div>
-                      <ul className="gatePopup__shifts">
-                        {Object.entries(gate.shifts)
-                          .sort(([a], [b]) => Number(a) - Number(b))
-                          .map(([n, v]) => (
-                            <li key={n}>
-                              <span>Shift {n}</span>
-                              <strong className={`shift shift--${v.toLowerCase()}`}>
-                                {v === 'TBD' ? 'Not posted' : v}
-                              </strong>
-                            </li>
-                          ))}
-                      </ul>
-                      <p className="gatePopup__note">
-                        Published by the Port of Long Beach for {dateISO}, captured{' '}
-                        {GATE_CAPTURED_AT.slice(0, 10)}. No queue or wait time is shown
-                        because none is published.
-                      </p>
-                    </>
-                  ) : success.known ? (
-                    <>
-                      <div
-                        className="gatePopup__level"
-                        style={{ '--load': success.band.color }}
-                      >
-                        <span className="gatePopup__dot" />
-                        {success.pct}% of appointments fulfilled — {success.band.label}
-                      </div>
-                      <p className="gatePopup__note">
-                        Port of LA, {POLA_SUCCESS_DATE} (complex-wide{' '}
-                        {success.allTerminals}%). This is appointment fulfilment, not
-                        a queue length or turn time — neither is published. Gate hours
-                        are not published either, so no open/closed is shown.
-                      </p>
-                    </>
-                  ) : (
-                    <p className="gatePopup__note gatePopup__note--unknown">
-                      Nothing published for this terminal — {gate.reason}.
-                    </p>
+                  <div
+                    className="gatePopup__level"
+                    style={{ '--load': access.color }}
+                  >
+                    <span className="gatePopup__dot" />
+                    {access.label}
+                  </div>
+
+                  {access.detail && <p className="gatePopup__detail">{access.detail}</p>}
+
+                  {access.shifts && (
+                    <ul className="gatePopup__shifts">
+                      {Object.entries(access.shifts)
+                        .sort(([a], [b]) => Number(a) - Number(b))
+                        .map(([n, v]) => (
+                          <li key={n}>
+                            <span>Shift {n}</span>
+                            <strong className={`shift shift--${v.toLowerCase()}`}>
+                              {v === 'TBD' ? 'Not posted' : v}
+                            </strong>
+                          </li>
+                        ))}
+                    </ul>
                   )}
+
+                  <p className="gatePopup__note">
+                    {access.basis === 'none'
+                      ? access.detail
+                      : `${access.source}, ${access.asOf}.`}
+                    {access.basis === 'shifts' &&
+                      ' Shifts worked is capacity offered, not queue length — Long Beach publishes no queue or turn time.'}
+                    {access.basis === 'appointments' &&
+                      ` Complex-wide ${access.allTerminals}%. Los Angeles publishes no gate hours.`}
+                  </p>
                 </div>
               </Popup>
             </Polygon>
@@ -292,8 +262,8 @@ export default function MapView({
               {terminal.berth}
               <br />
               {(() => {
-                const g = gateStatusFor(terminal.id, dateISO)
-                return g.known ? shiftSummary(g.shifts) : 'Gate status not published'
+                const a = terminalAccess(terminal.id, dateISO)
+                return a.detail ? `${a.label} — ${a.detail}` : a.label
               })()}
             </Tooltip>
           </Marker>

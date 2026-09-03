@@ -47,14 +47,28 @@ const BASEMAPS = {
   },
 }
 
-/** Pans to whatever the dispatcher just selected, without changing zoom out from under them. */
-function SelectionFocus({ target }) {
+/**
+ * Pans to a selection *only when something asked it to*.
+ *
+ * Keyed on `focusKey`, which the sidebar bumps and the map does not. Watching
+ * the target itself meant every click on the canvas recentred the map under the
+ * cursor, which is disorienting and makes the thing you just clicked jump away.
+ */
+function SelectionFocus({ target, focusKey }) {
   const map = useMap()
 
   useEffect(() => {
-    if (!target) return
-    map.flyTo(target, Math.max(map.getZoom(), 11), { duration: 0.7 })
-  }, [target, map])
+    // focusKey starts at 0 and only increments when a list asks to fly, so a
+    // falsy key means "nothing has asked yet" and the initial mount stays put.
+    // (An earlier version guarded with a ref, which re-initialised to the
+    // current key on remount and so never fired at all.)
+    if (!focusKey || !target) return
+    // Non-animated on purpose. Leaflet's zoom animation is unreliable here —
+    // animated setZoom/flyTo silently no-op while the non-animated paths work —
+    // and for "jump to the thing I picked in the list" an instant move is
+    // clearer than a fly anyway.
+    map.setView(target, Math.max(map.getZoom(), 12), { animate: false })
+  }, [focusKey, target, map])
 
   return null
 }
@@ -65,7 +79,7 @@ function HarborFocus({ requestKey }) {
 
   useEffect(() => {
     if (!requestKey) return
-    map.flyToBounds(HARBOR_BOUNDS, { padding: [40, 40], duration: 0.8 })
+    map.fitBounds(HARBOR_BOUNDS, { padding: [40, 40], animate: false })
   }, [requestKey, map])
 
   return null
@@ -112,6 +126,7 @@ export default function MapView({
   selected,
   onSelect,
   focusTarget,
+  focusKey,
   dateISO,
   harborFocusKey,
 }) {
@@ -152,7 +167,7 @@ export default function MapView({
     >
       <TileLayer url={basemap.base} attribution={basemap.attribution} maxNativeZoom={16} />
       <TileLayer url={basemap.reference} maxNativeZoom={16} zIndex={400} />
-      <SelectionFocus target={focusTarget} />
+      <SelectionFocus target={focusTarget} focusKey={focusKey} />
       <HarborFocus requestKey={harborFocusKey} />
       <ZoomWatch onZoom={setZoom} />
 

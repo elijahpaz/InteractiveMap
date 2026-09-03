@@ -10,7 +10,16 @@ const LAYERS = [
   { id: 'chassis', label: 'Chassis', swatch: '#94a3b8' },
 ]
 
-export default function LayerControl({ layers, onToggle, showCompleted, onToggleCompleted }) {
+const FLEET_LAYERS = new Set(['fleet', 'routes', 'clients', 'yards', 'containers', 'chassis'])
+
+export default function LayerControl({
+  layers,
+  onToggle,
+  showCompleted,
+  onToggleCompleted,
+  showFleet,
+}) {
+  const visible = LAYERS.filter((l) => showFleet || !FLEET_LAYERS.has(l.id))
   return (
     <div className="panel layers">
       <div className="panel__head">
@@ -18,7 +27,7 @@ export default function LayerControl({ layers, onToggle, showCompleted, onToggle
       </div>
 
       <ul className="layers__list">
-        {LAYERS.map((layer) => (
+        {visible.map((layer) => (
           <li key={layer.id}>
             <label className="check">
               <input
@@ -37,11 +46,13 @@ export default function LayerControl({ layers, onToggle, showCompleted, onToggle
         ))}
       </ul>
 
-      <label className="check check--muted">
-        <input type="checkbox" checked={showCompleted} onChange={onToggleCompleted} />
-        <span className="check__box" />
-        <span className="check__label">Include completed moves</span>
-      </label>
+      {showFleet && (
+        <label className="check check--muted">
+          <input type="checkbox" checked={showCompleted} onChange={onToggleCompleted} />
+          <span className="check__box" />
+          <span className="check__label">Include completed moves</span>
+        </label>
+      )}
 
       <div className="legend">
         <p className="legend__title">Gate access today</p>

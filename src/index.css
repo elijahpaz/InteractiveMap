@@ -1649,3 +1649,14 @@ body {
   color: var(--text-faint);
   border-top: 1px solid var(--line);
 }
+
+/* The tab strip sizes to however many tabs are actually showing. */
+.tabs--1 { grid-template-columns: 1fr; }
+.tabs--5 { grid-template-columns: repeat(5, 1fr); }
+
+/* Port-only view has four tiles, not six. */
+.kpis--port { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 1200px) {
+  .kpis--port { grid-template-columns: repeat(2, 1fr); }
+}

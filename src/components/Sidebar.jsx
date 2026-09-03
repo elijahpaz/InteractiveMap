@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
 import { SEVERITY } from '../lib/exceptions.js'
 import {
@@ -9,12 +9,14 @@ import {
   formatDuration,
 } from '../lib/status.js'
 
-const TABS = [
+// Terminals are always available because they are the real data. Everything
+// else in this list describes the simulated fleet and appears with it.
+const PORT_TABS = [{ id: 'network', label: 'Terminals' }]
+const FLEET_TABS = [
   { id: 'alerts', label: 'Alerts' },
   { id: 'fleet', label: 'Fleet' },
   { id: 'containers', label: 'Boxes' },
   { id: 'chassis', label: 'Chassis' },
-  { id: 'network', label: 'Network' },
 ]
 
 function nodeName(id) {
@@ -46,8 +48,22 @@ function Row({ active, onClick, accent, title, subtitle, meta, tag, tagColor }) 
   )
 }
 
-export default function Sidebar({ trucks, containers, chassis, exceptions, selected, onSelect }) {
-  const [tab, setTab] = useState('alerts')
+export default function Sidebar({
+  showFleet,
+  trucks,
+  containers,
+  chassis,
+  exceptions,
+  selected,
+  onSelect,
+}) {
+  const [tab, setTab] = useState('network')
+
+  // Collapsing the tab set must not strand the view on a tab that is gone.
+  const tabs = showFleet ? [...FLEET_TABS, ...PORT_TABS] : PORT_TABS
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === tab)) setTab('network')
+  }, [tabs, tab])
   const [query, setQuery] = useState('')
 
   const q = query.trim().toLowerCase()
@@ -93,7 +109,7 @@ export default function Sidebar({ trucks, containers, chassis, exceptions, selec
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Unit, driver, container, client…"
+          placeholder={showFleet ? 'Unit, driver, container, client…' : 'Search terminals…'}
           aria-label="Search fleet and equipment"
         />
         {query && (
@@ -103,8 +119,8 @@ export default function Sidebar({ trucks, containers, chassis, exceptions, selec
         )}
       </div>
 
-      <div className="tabs" role="tablist">
-        {TABS.map((t) => (
+      <div className={`tabs tabs--${tabs.length}`} role="tablist">
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -217,8 +233,8 @@ export default function Sidebar({ trucks, containers, chassis, exceptions, selec
               />
             ))}
 
-            <div className="sidebar__group">Yards</div>
-            {filtered.yards.map((y) => (
+            {showFleet && <div className="sidebar__group">Yards</div>}
+            {showFleet && filtered.yards.map((y) => (
               <Row
                 key={y.id}
                 active={isActive('yard', y.id)}
@@ -230,8 +246,8 @@ export default function Sidebar({ trucks, containers, chassis, exceptions, selec
               />
             ))}
 
-            <div className="sidebar__group">Clients</div>
-            {filtered.clients.map((c) => (
+            {showFleet && <div className="sidebar__group">Clients</div>}
+            {showFleet && filtered.clients.map((c) => (
               <Row
                 key={c.id}
                 active={isActive('client', c.id)}

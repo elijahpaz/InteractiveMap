@@ -177,6 +177,22 @@ schedule; neither is interesting alone:
 
 Every rule reads state the app already holds — no rule needs data we don't have.
 
+## The default view
+
+The app opens on **what the ports actually publish**: the 13 terminals, coloured
+by gate access, and four measured figures across the top. Three buttons — Harbor,
+Fleet demo, Light.
+
+Everything simulated sits behind the **Fleet demo** switch: trucks, drivers,
+containers, chassis, clients, the clock and its transport controls, the scorecard
+and the exception list. Off by default, because it is scaffolding for records you
+would replace with your own, not data about the world.
+
+Clicking a terminal **on the map** selects it without moving the map. Clicking a
+row **in the list** moves the map to it, because it may be off screen. Those are
+deliberately different: recentring under the cursor on every click is
+disorienting.
+
 ## One colour, from each port's own figures
 
 Every terminal carries a single reading — **Running well / Some pressure /

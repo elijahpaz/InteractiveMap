@@ -40,6 +40,10 @@ export default function App() {
   const { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset } = useSimulation()
 
   const [harborFocusKey, setHarborFocusKey] = useState(0)
+  const [focusKey, setFocusKey] = useState(0)
+  // The port data is real and the fleet is scaffolding, so the app opens on the
+  // real thing and everything simulated sits behind one switch.
+  const [showFleet, setShowFleet] = useState(false)
   const [demoNoticeOpen, setDemoNoticeOpen] = useState(true)
   const [scorecardOpen, setScorecardOpen] = useState(false)
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
@@ -65,16 +69,36 @@ export default function App() {
   )
   const alertCounts = useMemo(() => exceptionCounts(exceptions), [exceptions])
 
+  // With the demo off, only the terminal layer is live. MapView reads clients
+  // and yards from the network module directly, so hiding them means clearing
+  // the flags rather than emptying a prop.
+  const effectiveLayers = useMemo(
+    () => (showFleet ? layers : { terminals: layers.terminals }),
+    [showFleet, layers]
+  )
+
   const toggleLayer = useCallback(
     (id) => setLayers((l) => ({ ...l, [id]: !l[id] })),
     []
   )
 
-  const select = useCallback((next) => {
-    setSelected((current) =>
-      current && current.type === next.type && current.id === next.id ? null : next
-    )
+  /**
+   * `focus` is what separates "I clicked a row in the list, take me there" from
+   * "I clicked the thing on the map" — the second must not move the map, or
+   * every click on the canvas makes it lurch under the cursor.
+   */
+  const select = useCallback((next, { focus = false } = {}) => {
+    setSelected((current) => {
+      const same = current && current.type === next.type && current.id === next.id
+      return same ? null : next
+    })
+    if (focus) setFocusKey((k) => k + 1)
   }, [])
+
+  /** Selecting from the map itself: change the selection, leave the view alone. */
+  const selectOnMap = useCallback((next) => select(next, { focus: false }), [select])
+  /** Selecting from a list: fly to it, because it may be off screen. */
+  const selectFromList = useCallback((next) => select(next, { focus: true }), [select])
 
   // Where the map should fly when the selection changes.
   const focusTarget = useMemo(() => {
@@ -111,25 +135,17 @@ export default function App() {
           </span>
           <div>
             <h1>Drayage Ops</h1>
-            <p>San Pedro Bay · Fleet &amp; equipment</p>
+            <p>San Pedro Bay · live port conditions</p>
           </div>
         </div>
 
         <div className="topbar__clock">
           <span className="topbar__day">{dateISO}</span>
-          <span className="topbar__time">{formatClock(clockMin)}</span>
-          <span className="topbar__tz">PT</span>
+          {showFleet && <span className="topbar__time">{formatClock(clockMin)}</span>}
+          {showFleet && <span className="topbar__tz">PT</span>}
         </div>
 
         <div className="topbar__controls">
-          <button
-            type="button"
-            className={`ctrl ${scorecardOpen ? 'is-on' : ''}`}
-            onClick={() => setScorecardOpen((v) => !v)}
-          >
-            Scorecard
-          </button>
-
           <button
             type="button"
             className="ctrl"
@@ -138,7 +154,26 @@ export default function App() {
             Harbor
           </button>
 
+          {/* Everything simulated sits behind one switch, so the default view is
+              only what the ports actually publish. */}
           <button
+            type="button"
+            className={`ctrl ${showFleet ? 'is-on' : ''}`}
+            onClick={() => setShowFleet((v) => !v)}
+          >
+            Fleet demo
+          </button>
+
+          {showFleet && (
+            <>
+              <button
+                type="button"
+                className={`ctrl ${scorecardOpen ? 'is-on' : ''}`}
+                onClick={() => setScorecardOpen((v) => !v)}
+              >
+                Scorecard
+              </button>
+              <button
                 type="button"
                 className={`ctrl ${playing ? 'is-on' : ''}`}
                 onClick={() => setPlaying((p) => !p)}
@@ -146,20 +181,22 @@ export default function App() {
                 {playing ? 'Pause' : 'Play'}
               </button>
               <div className="speeds" role="group" aria-label="Simulation speed">
-                {SPEEDS.map((s) => (
+                {SPEEDS.map((sp) => (
                   <button
-                    key={s}
+                    key={sp}
                     type="button"
-                    className={`speeds__btn ${speed === s ? 'is-on' : ''}`}
-                    onClick={() => setSpeed(s)}
+                    className={`speeds__btn ${speed === sp ? 'is-on' : ''}`}
+                    onClick={() => setSpeed(sp)}
                   >
-                    {s}×
+                    {sp}×
                   </button>
                 ))}
               </div>
-          <button type="button" className="ctrl" onClick={reset}>
-            Reset
-          </button>
+              <button type="button" className="ctrl" onClick={reset}>
+                Reset
+              </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -177,13 +214,13 @@ export default function App() {
         <div className="demoNotice">
           <span className="demoNotice__tag">Demo data</span>
           <p>
-            <strong>Real:</strong> the 13 terminals, operators, berths and
-            boundaries; Long Beach gate status ({COVERAGE_START}–{COVERAGE_END},
-            captured {GATE_CAPTURED_AT.slice(0, 10)}); and Los Angeles appointment
-            fulfilment ({POLA_SUCCESS_DATE}). <strong>Simulated:</strong> the fleet,
-            drivers, containers, chassis and clients — placeholders for your own
-            records. <strong>Still unknown:</strong> queue lengths and truck turn
-            times, which no port publishes free, so the app does not state them.
+            <strong>Real:</strong> the 13 terminals and their boundaries; Long
+            Beach gate turn times, truck moves and dwell, live from CargoNav; Long
+            Beach gate calendar (captured {GATE_CAPTURED_AT.slice(0, 10)}); and Los
+            Angeles appointment fulfilment ({POLA_SUCCESS_DATE}).{' '}
+            <strong>Simulated:</strong> everything behind the “Fleet demo” switch —
+            trucks, drivers, containers, chassis and clients are placeholders for
+            your own records, not real operations.
           </p>
           <button
             type="button"
@@ -211,7 +248,7 @@ export default function App() {
           chassis={CHASSIS}
           exceptions={exceptions}
           selected={selected}
-          onSelect={select}
+          onSelect={selectFromList}
         />
 
         <div className="stage">
@@ -219,11 +256,12 @@ export default function App() {
             trucks={trucks}
             containers={containers}
             chassis={CHASSIS}
-            layers={layers}
+            layers={effectiveLayers}
             theme={theme}
             selected={selected}
-            onSelect={select}
+            onSelect={selectOnMap}
             focusTarget={focusTarget}
+            focusKey={focusKey}
             dateISO={dateISO}
             harborFocusKey={harborFocusKey}
           />
@@ -250,7 +288,7 @@ export default function App() {
           containers={containers}
           chassis={CHASSIS}
           dateISO={dateISO}
-          onSelect={select}
+          onSelect={selectFromList}
           onClose={() => setSelected(null)}
         />
       </main>

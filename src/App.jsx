@@ -10,6 +10,7 @@ import { useSimulation } from './hooks/useSimulation.js'
 import { isLiveContainer } from './lib/status.js'
 import { congestionSnapshot } from './lib/congestion.js'
 import { CONTAINER_TERMINALS } from './data/terminals.js'
+import { DAY_SHORT } from './data/gateSchedules.js'
 
 const DEFAULT_LAYERS = {
   fleet: true,
@@ -31,7 +32,7 @@ function formatClock(totalMinutes) {
 }
 
 export default function App() {
-  const { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset } = useSimulation()
+  const { trucks, playing, setPlaying, speed, setSpeed, clockMin, day, reset } = useSimulation()
 
   const [harborFocusKey, setHarborFocusKey] = useState(0)
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
@@ -47,8 +48,8 @@ export default function App() {
   )
 
   const congestion = useMemo(
-    () => congestionSnapshot(CONTAINER_TERMINALS.map((t) => t.id), Math.floor(clockMin)),
-    [Math.floor(clockMin)] // eslint-disable-line react-hooks/exhaustive-deps
+    () => congestionSnapshot(CONTAINER_TERMINALS.map((t) => t.id), Math.floor(clockMin), day),
+    [Math.floor(clockMin), day] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   const toggleLayer = useCallback(
@@ -102,6 +103,7 @@ export default function App() {
         </div>
 
         <div className="topbar__clock">
+          <span className="topbar__day">{DAY_SHORT[day]}</span>
           <span className="topbar__time">{formatClock(clockMin)}</span>
           <span className="topbar__tz">PT</span>
         </div>
@@ -170,6 +172,7 @@ export default function App() {
             onSelect={select}
             focusTarget={focusTarget}
             congestion={congestion}
+            day={day}
             harborFocusKey={harborFocusKey}
           />
 
@@ -187,6 +190,7 @@ export default function App() {
           containers={containers}
           chassis={CHASSIS}
           congestion={congestion}
+          day={day}
           onSelect={select}
           onClose={() => setSelected(null)}
         />

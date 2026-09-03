@@ -13,6 +13,7 @@ import {
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
 import { HARBOR_BOUNDS, PORTS, TERMINAL_BY_ID } from '../data/terminals.js'
 import { formatDuration } from '../lib/status.js'
+import { scheduleLabel } from '../lib/gates.js'
 import { spreadPosition } from '../lib/geo.js'
 import {
   chassisIcon,
@@ -113,6 +114,7 @@ export default function MapView({
   onSelect,
   focusTarget,
   congestion,
+  day,
   harborFocusKey,
 }) {
   const [zoom, setZoom] = useState(10)
@@ -181,9 +183,11 @@ export default function MapView({
           const load = congestion?.[terminal.id]
           // Congestion colour wins when the layer is on; otherwise the terminal
           // is tinted by which port it belongs to.
-          const fill = layers.congestion && load
-            ? load.level.color
-            : PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
+          const fill = load?.closed
+            ? '#64748b'
+            : layers.congestion && load
+              ? load.level.color
+              : PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
 
           return (
             <Polygon
@@ -194,7 +198,10 @@ export default function MapView({
                 weight: active ? 2.5 : 1,
                 opacity: showShapes ? 0.85 : 0,
                 fillColor: fill,
-                fillOpacity: showShapes ? (active ? 0.9 : 0.6) : 0,
+                // A shut gate is drawn back and dashed — it should not read as
+                // somewhere a truck can be sent right now.
+                fillOpacity: showShapes ? (active ? 0.9 : load?.closed ? 0.3 : 0.6) : 0,
+                dashArray: load?.closed ? '4 4' : null,
               }}
               eventHandlers={{ click: () => onSelect({ type: 'terminal', id: terminal.id }) }}
             >
@@ -204,29 +211,59 @@ export default function MapView({
                   <h4 className="gatePopup__name">{terminal.name}</h4>
                   <p className="gatePopup__berths">{terminal.berth}</p>
 
-                  {load && (
+                  {load?.closed ? (
                     <>
-                      <div
-                        className="gatePopup__level"
-                        style={{ '--load': load.level.color }}
-                      >
+                      <div className="gatePopup__level gatePopup__level--shut">
                         <span className="gatePopup__dot" />
-                        {load.level.label} · {load.queueTrucks} trucks queued
-                      </div>
-                      <div className="gatePopup__times">
-                        <div>
-                          <span>Pick up</span>
-                          <strong>{formatDuration(load.pickupMin)}</strong>
-                        </div>
-                        <div>
-                          <span>Drop off</span>
-                          <strong>{formatDuration(load.dropoffMin)}</strong>
-                        </div>
+                        Gate closed
                       </div>
                       <p className="gatePopup__note">
-                        Gate {terminal.gateHours} · modelled, not a live feed
+                        {load.gate.nextOpenLabel
+                          ? `Reopens ${load.gate.nextOpenLabel}`
+                          : 'No further gate scheduled'}
+                        {' · '}
+                        {scheduleLabel(terminal.id, day)} today
                       </p>
                     </>
+                  ) : (
+                    load && (
+                      <>
+                        <div
+                          className="gatePopup__level"
+                          style={{ '--load': load.level.color }}
+                        >
+                          <span className="gatePopup__dot" />
+                          {load.level.label} · {load.queueTrucks} trucks queued
+                        </div>
+                        <div className="gatePopup__times">
+                          <div>
+                            <span>Pick up</span>
+                            <strong>{formatDuration(load.pickupMin)}</strong>
+                          </div>
+                          <div>
+                            <span>Drop off</span>
+                            <strong>{formatDuration(load.dropoffMin)}</strong>
+                          </div>
+                        </div>
+
+                        {!load.makesGate && (
+                          <p className="gatePopup__warn">
+                            Gate shuts in {formatDuration(load.gate.closesInMin)} —
+                            leaving now misses this window.{' '}
+                            {load.gate.reopensLabel
+                              ? `Next gate ${load.gate.reopensLabel}.`
+                              : 'No further gate scheduled.'}
+                          </p>
+                        )}
+
+                        <p className="gatePopup__note">
+                          {scheduleLabel(terminal.id, day)}
+                          {load.gate.state === 'closing' &&
+                            ` · closes in ${formatDuration(load.gate.closesInMin)}`}
+                          {' · modelled, not a live feed'}
+                        </p>
+                      </>
+                    )
                   )}
                 </div>
               </Popup>
@@ -251,8 +288,11 @@ export default function MapView({
               {congestion?.[terminal.id] && (
                 <>
                   <br />
-                  {congestion[terminal.id].level.label} · pick up{' '}
-                  {formatDuration(congestion[terminal.id].pickupMin)}
+                  {congestion[terminal.id].closed
+                    ? `Gate closed · reopens ${congestion[terminal.id].gate.nextOpenLabel ?? '—'}`
+                    : `${congestion[terminal.id].level.label} · pick up ${formatDuration(
+                        congestion[terminal.id].pickupMin
+                      )}`}
                 </>
               )}
             </Tooltip>

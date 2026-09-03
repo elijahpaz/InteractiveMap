@@ -33,6 +33,34 @@ Both are simplified with Douglas-Peucker for payload size. OSM still files three
 POLA terminals under legacy tenant names — *China Shipping* and *Yang Ming* for
 the two WBCT terminals, *Evergreen* for Everport.
 
+## Gate hours
+
+Gate hours are a **weekly schedule**, not a string. `src/data/gateSchedules.js`
+holds per-terminal windows indexed by weekday, and the structure is the part
+that's real:
+
+- several windows per day, so a midday break is expressible
+- a window may run past midnight (`close > 1440`) for a night gate
+- a day with no windows is closed
+
+The hours themselves are placeholders — POLB republishes real ones continuously
+at [polb.com/port-info/gate-hours/](https://polb.com/port-info/gate-hours/) — but
+a real feed drops straight into this shape. What the schedule buys you:
+
+- Terminals go **dashed and grey when the gate is shut**, with the next opening.
+  At Tuesday 12:31 lunch, 10 of 13 gates close and the KPI reads 3/13 — only
+  Everport (no break), APM (05:00-03:00) and LBCT (night gate) stay open.
+- The estimate is **checked against the close**. If a truck leaving now can't get
+  through before the gate shuts, the popup says so and names the next window —
+  and it distinguishes *missing a window* from *missing the day*: Tue 08:54 at
+  Pier T reopens Tue 13:00, but Fri 16:50 reopens **Mon 07:00**, skipping the
+  weekend.
+
+That check is the reason the schedule matters. "Est. pick up 3h 40m" is worthless
+on its own if the gate shuts in twenty minutes, and a single `'07:00 - 17:00'`
+string cannot express a lunch closure, a Saturday gate, or a night gate — so any
+estimate built on one is wrong the moment a terminal does anything else.
+
 ## Gate congestion
 
 Terminals shade green → yellow → orange → red by gate congestion, and clicking
@@ -85,11 +113,13 @@ src/
   data/
     terminals.js   the 13 container terminals — real geometry, provenance noted
     network.js     re-exports terminals; adds yards and clients (invented)
+    gateSchedules.js  weekly gate windows per terminal
     corridors.js   hand-traced freeway polylines through the LA basin
     fleet.js       truck roster; each unit declares its yard/terminal/client
     equipment.js   containers and chassis
   lib/
     congestion.js  the congestion model, and the seam to a real feed
+    gates.js       gate open/closed state, and whether a truck makes the window
     routing.js     composes corridors into legs and three-leg tours
     geo.js         distance, interpolation along a route, marker fan-out
     status.js      every status label and colour, in one place
@@ -124,6 +154,7 @@ The seams are deliberate:
 | Nodes and roster | `src/data/*.js` | Fetch from the TMS rather than importing constants |
 | Demurrage clocks | `lib/status.js` → `demurrageRisk` | Feed real last-free-day dates in place of `lfdOffsetDays` |
 | Gate congestion | `lib/congestion.js` → `congestionFor` | Return live figures in the same shape |
+| Gate hours | `data/gateSchedules.js` | Replace the windows; the structure already fits |
 
 Demo data uses `lfdOffsetDays` (days relative to today) rather than fixed dates
 so the risk colours stay meaningful whenever you open it.
@@ -141,6 +172,7 @@ worse than obviously fake data. The split:
 | Drayage terminology and mechanics | All 8 client companies and both yards |
 | | Gate hours, turn times, appointment flags |
 | | **All congestion figures and time estimates** |
+| | **All gate hours** (the schedule *structure* is real) |
 
 Anything under a `demo` key, and everything in `YARDS` / `CLIENTS`, is a
 placeholder. The client companies are invented names on real street names — they

@@ -1,4 +1,5 @@
 import { TERMINAL_BY_ID } from '../data/terminals.js'
+import { gateStatus, willMakeGate } from './gates.js'
 
 /**
  * Terminal congestion, and what it costs a truck.
@@ -106,9 +107,41 @@ export function congestionFor(terminalId, clockMin) {
   }
 }
 
-/** Congestion for every terminal at once, keyed by id. */
-export function congestionSnapshot(terminalIds, clockMin) {
+/**
+ * Congestion combined with gate state — what the map actually shows.
+ *
+ * A closed gate has no queue and no estimate, and saying "pick up 3h 40m" for a
+ * terminal that shut twenty minutes ago is worse than saying nothing. When the
+ * gate is open, `makesGate` says whether a truck leaving now would actually get
+ * processed before it closes; when that is false the estimate is real but
+ * unusable, and the UI marks it rather than showing it plain.
+ */
+export function terminalConditions(terminalId, clockMin, day) {
+  const gate = gateStatus(terminalId, clockMin, day)
+  const load = congestionFor(terminalId, clockMin)
+  if (!load) return null
+
+  if (!gate.open) {
+    return {
+      ...load,
+      gate,
+      closed: true,
+      makesGate: false,
+      index: 0,
+      level: levelFor(0),
+      queueTrucks: 0,
+      waitMin: null,
+      pickupMin: null,
+      dropoffMin: null,
+    }
+  }
+
+  return { ...load, gate, closed: false, makesGate: willMakeGate(gate, load.pickupMin) }
+}
+
+/** Conditions for every terminal at once, keyed by id. */
+export function congestionSnapshot(terminalIds, clockMin, day) {
   return Object.fromEntries(
-    terminalIds.map((id) => [id, congestionFor(id, clockMin)])
+    terminalIds.map((id) => [id, terminalConditions(id, clockMin, day)])
   )
 }

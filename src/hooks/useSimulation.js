@@ -48,6 +48,7 @@ export function useSimulation() {
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(1)
   const [clockMin, setClockMin] = useState(8 * 60 + 20) // 08:20 local
+  const [day, setDay] = useState(2) // Tuesday — a normal working day
   const [motion, setMotion] = useState(initialState)
   const lastTickRef = useRef(null)
 
@@ -63,6 +64,7 @@ export function useSimulation() {
   const reset = useCallback(() => {
     setMotion(initialState())
     setClockMin(8 * 60 + 20)
+    setDay(2)
     lastTickRef.current = null
   }, [])
 
@@ -82,7 +84,12 @@ export function useSimulation() {
       const simMinutes = realSeconds * SIM_MINUTES_PER_REAL_SECOND * speed
       if (simMinutes <= 0) return
 
-      setClockMin((c) => (c + simMinutes) % (24 * 60))
+      setClockMin((c) => {
+        const next = c + simMinutes
+        // Roll the weekday over at midnight so gate schedules actually cycle.
+        if (next >= 24 * 60) setDay((d) => (d + 1) % 7)
+        return next % (24 * 60)
+      })
       setMotion((current) =>
         current.map((m) => {
           const truck = TRUCKS.find((t) => t.id === m.id)
@@ -150,5 +157,5 @@ export function useSimulation() {
     [motion, legMinutesByTruck]
   )
 
-  return { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset }
+  return { trucks, playing, setPlaying, speed, setSpeed, clockMin, day, reset }
 }

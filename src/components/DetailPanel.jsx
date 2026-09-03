@@ -1,5 +1,6 @@
 import { NODES } from '../data/network.js'
 import { remainingMiles } from '../lib/geo.js'
+import { scheduleLabel } from '../lib/gates.js'
 import {
   CHASSIS_STATUS,
   CONTAINER_STATUS,
@@ -237,7 +238,7 @@ function ChassisDetail({ chassis, onSelect, onClose }) {
   )
 }
 
-function TerminalDetail({ terminal, inbound, load, onClose }) {
+function TerminalDetail({ terminal, inbound, load, day, onClose }) {
   return (
     <>
       <Header
@@ -248,7 +249,31 @@ function TerminalDetail({ terminal, inbound, load, onClose }) {
         onClose={onClose}
       />
 
-      {load && (
+      {load?.closed && (
+        <div className="alert alert--accruing" style={{ '--risk': '#64748b' }}>
+          <strong>Gate closed</strong>
+          <span>
+            {load.gate.nextOpenLabel
+              ? `Reopens ${load.gate.nextOpenLabel}`
+              : 'No further gate scheduled'}
+          </span>
+        </div>
+      )}
+
+      {load && !load.closed && !load.makesGate && (
+        <div className="alert alert--accruing" style={{ '--risk': '#ef4444' }}>
+          <strong>Misses this gate window</strong>
+          <span>
+            Closes in {formatDuration(load.gate.closesInMin)}; estimated{' '}
+            {formatDuration(load.pickupMin)} to get through.{' '}
+            {load.gate.reopensLabel
+              ? `Next gate ${load.gate.reopensLabel}.`
+              : 'No further gate scheduled.'}
+          </span>
+        </div>
+      )}
+
+      {load && !load.closed && (
         <>
           <div className="loadBar" style={{ '--load': load.level.color }}>
             <span className="loadBar__fill" style={{ width: `${load.index}%` }} />
@@ -265,7 +290,7 @@ function TerminalDetail({ terminal, inbound, load, onClose }) {
       <div className="fields">
         <Field label="Operator" value={terminal.operator} />
         <Field label="Berths" value={terminal.berth} />
-        <Field label="Gate hours" value={terminal.gateHours} />
+        <Field label="Gate today" value={scheduleLabel(terminal.id, day)} />
         <Field
           label="Appointments"
           value={terminal.appointmentRequired ? 'Required' : 'Not required'}
@@ -342,6 +367,7 @@ export default function DetailPanel({
   containers,
   chassis,
   congestion,
+  day,
   onSelect,
   onClose,
 }) {
@@ -402,7 +428,13 @@ export default function DetailPanel({
     ).length
     return (
       <section className="detail">
-        <TerminalDetail terminal={node} inbound={inbound} load={congestion?.[id]} onClose={onClose} />
+        <TerminalDetail
+          terminal={node}
+          inbound={inbound}
+          load={congestion?.[id]}
+          day={day}
+          onClose={onClose}
+        />
       </section>
     )
   }

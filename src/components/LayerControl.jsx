@@ -10,21 +10,11 @@ const LAYERS = [
   { id: 'chassis', label: 'Chassis', swatch: '#94a3b8' },
 ]
 
-export default function LayerControl({
-  layers,
-  onToggle,
-  showCompleted,
-  onToggleCompleted,
-  theme,
-  onToggleTheme,
-}) {
+export default function LayerControl({ layers, onToggle, showCompleted, onToggleCompleted }) {
   return (
     <div className="panel layers">
       <div className="panel__head">
         <h3>Layers</h3>
-        <button type="button" className="ghostBtn" onClick={onToggleTheme}>
-          {theme === 'dark' ? 'Light' : 'Dark'}
-        </button>
       </div>
 
       <ul className="layers__list">

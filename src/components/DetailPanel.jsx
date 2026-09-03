@@ -249,6 +249,7 @@ function TerminalDetail({ terminal, inbound, onClose }) {
       />
 
       <div className="fields">
+        <Field label="Operator" value={terminal.operator} />
         <Field label="Berths" value={terminal.berth} />
         <Field label="Gate hours" value={terminal.gateHours} />
         <Field
@@ -261,7 +262,6 @@ function TerminalDetail({ terminal, inbound, onClose }) {
           value={terminal.dualTransaction ? 'Allowed' : 'Not allowed'}
           accent={terminal.dualTransaction ? '#22c55e' : '#f59e0b'}
         />
-        <Field label="Lines served" value={terminal.ssl.join(', ')} />
         <Field label="Trucks inbound" value={inbound} />
       </div>
     </>

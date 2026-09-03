@@ -66,7 +66,7 @@ export default function KpiBar({ trucks, containers, chassis }) {
         sub={`${stats.oosChassis} out of service`}
         tone={stats.availableChassis < 3 ? 'warn' : 'good'}
       />
-      <Kpi label="Avg turn time" value={`${stats.avgTurn}m`} sub="across 9 terminals" tone="neutral" />
+      <Kpi label="Avg turn time" value={`${stats.avgTurn}m`} sub={`across ${TERMINALS.length} terminals`} tone="neutral" />
       <Kpi label="Live boxes" value={containers.length} sub="not yet completed" tone="neutral" />
     </div>
   )

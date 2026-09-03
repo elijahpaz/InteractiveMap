@@ -1,117 +1,33 @@
-// Fixed network nodes for the San Pedro Bay port complex (Port of LA / Long Beach)
-// and the inland delivery basin. Coordinates are approximate berth/facility centroids.
+// Fixed network nodes for the San Pedro Bay drayage network.
+//
+// TERMINALS are re-exported from terminals.js — real facilities, sourced from
+// the two port authorities. YARDS and CLIENTS below are INVENTED demo data:
+// the company names, addresses, capacities and order counts are placeholders,
+// not real businesses. Replace them with the real network from the TMS.
 
-export const TERMINALS = [
-  {
-    id: 'T-APM',
-    name: 'APM Terminals',
-    berth: 'Pier 400, Berths 401-406',
-    port: 'Port of Los Angeles',
-    position: [33.7255, -118.262],
-    ssl: ['Maersk', 'Hamburg Sud', 'Sealand'],
-    gateHours: '05:00 - 03:00',
-    appointmentRequired: true,
-    // rough live-ops signal shown in the detail panel
-    turnTimeMin: 78,
-    dualTransaction: true,
-  },
-  {
-    id: 'T-FMS',
-    name: 'Fenix Marine Services',
-    berth: 'Pier 300, Berths 302-306',
-    port: 'Port of Los Angeles',
-    position: [33.729, -118.244],
-    ssl: ['CMA CGM', 'APL'],
-    gateHours: '07:00 - 17:00',
-    appointmentRequired: true,
-    turnTimeMin: 64,
-    dualTransaction: true,
-  },
-  {
-    id: 'T-TRP',
-    name: 'TraPac',
-    berth: 'Berths 136-147',
-    port: 'Port of Los Angeles',
-    position: [33.758, -118.266],
-    ssl: ['ONE', 'Mitsui O.S.K.'],
-    gateHours: '08:00 - 17:00',
-    appointmentRequired: true,
-    turnTimeMin: 92,
-    dualTransaction: false,
-  },
-  {
-    id: 'T-YTI',
-    name: 'Yusen Terminals',
-    berth: 'Berths 212-225',
-    port: 'Port of Los Angeles',
-    position: [33.748, -118.234],
-    ssl: ['ONE', 'Yang Ming'],
-    gateHours: '08:00 - 17:00',
-    appointmentRequired: true,
-    turnTimeMin: 71,
-    dualTransaction: true,
-  },
-  {
-    id: 'T-EVP',
-    name: 'Everport Terminal Services',
-    berth: 'Berths 226-236',
-    port: 'Port of Los Angeles',
-    position: [33.744, -118.228],
-    ssl: ['Evergreen', 'COSCO'],
-    gateHours: '08:00 - 17:00',
-    appointmentRequired: false,
-    turnTimeMin: 58,
-    dualTransaction: false,
-  },
-  {
-    id: 'T-LBCT',
-    name: 'Long Beach Container Terminal',
-    berth: 'Middle Harbor, Pier E',
-    port: 'Port of Long Beach',
-    position: [33.762, -118.217],
-    ssl: ['Orient Overseas', 'COSCO'],
-    gateHours: '06:00 - 02:00',
-    appointmentRequired: true,
-    turnTimeMin: 44,
-    dualTransaction: true,
-  },
-  {
-    id: 'T-TTI',
-    name: 'Total Terminals International',
-    berth: 'Pier T, Berths T132-T140',
-    port: 'Port of Long Beach',
-    position: [33.748, -118.213],
-    ssl: ['HMM', 'Hapag-Lloyd'],
-    gateHours: '07:00 - 17:00',
-    appointmentRequired: true,
-    turnTimeMin: 83,
-    dualTransaction: true,
-  },
-  {
-    id: 'T-PCT',
-    name: 'Pacific Container Terminal',
-    berth: 'Pier J, Berths J245-J270',
-    port: 'Port of Long Beach',
-    position: [33.737, -118.183],
-    ssl: ['Matson', 'Yang Ming'],
-    gateHours: '07:00 - 17:00',
-    appointmentRequired: false,
-    turnTimeMin: 67,
-    dualTransaction: false,
-  },
-  {
-    id: 'T-ITS',
-    name: 'International Transportation Service',
-    berth: 'Pier G, Berths G226-G236',
-    port: 'Port of Long Beach',
-    position: [33.75, -118.19],
-    ssl: ['K Line', 'ONE'],
-    gateHours: '08:00 - 17:00',
-    appointmentRequired: true,
-    turnTimeMin: 75,
-    dualTransaction: true,
-  },
-]
+import { CONTAINER_TERMINALS, PORTS } from './terminals.js'
+
+/**
+ * Terminals for the operations views. There is exactly one terminal list in
+ * this project — `terminals.js` — and this flattens it into the shape the ops
+ * components expect. Operating characteristics come from that file's `demo`
+ * block and are simulated; the identity fields are sourced. See its header.
+ */
+export const TERMINALS = CONTAINER_TERMINALS.map((t) => ({
+  id: t.id,
+  name: t.name,
+  operator: t.operator,
+  berth: `${t.pier} · Berths ${t.berths}`,
+  port: PORTS[t.port].name,
+  position: t.position,
+  boundary: t.boundary,
+  boundarySource: t.boundarySource,
+  // ── simulated ──
+  turnTimeMin: t.demo.turnTimeMin,
+  gateHours: t.demo.gateHours,
+  appointmentRequired: t.demo.appointmentRequired,
+  dualTransaction: t.demo.dualTransaction,
+}))
 
 export const YARDS = [
   {

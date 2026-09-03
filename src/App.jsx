@@ -3,6 +3,7 @@ import DetailPanel from './components/DetailPanel.jsx'
 import KpiBar from './components/KpiBar.jsx'
 import LayerControl from './components/LayerControl.jsx'
 import MapView from './components/MapView.jsx'
+import PortMap from './components/PortMap.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { CHASSIS, CONTAINERS } from './data/equipment.js'
 import { NODES } from './data/network.js'
@@ -30,6 +31,7 @@ function formatClock(totalMinutes) {
 export default function App() {
   const { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset } = useSimulation()
 
+  const [view, setView] = useState('ops')
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
   const [theme, setTheme] = useState('dark')
   const [showCompleted, setShowCompleted] = useState(false)
@@ -75,7 +77,7 @@ export default function App() {
   }, [selected, containers])
 
   return (
-    <div className={`app app--${theme}`}>
+    <div className={`app app--${theme} ${view === 'port' ? 'app--port' : ''}`}>
       <header className="topbar">
         <div className="topbar__brand">
           <span className="topbar__mark" aria-hidden="true">
@@ -92,79 +94,115 @@ export default function App() {
           </div>
         </div>
 
-        <div className="topbar__clock">
-          <span className="topbar__time">{formatClock(clockMin)}</span>
-          <span className="topbar__tz">PT</span>
-        </div>
+        {view === 'ops' && (
+          <div className="topbar__clock">
+            <span className="topbar__time">{formatClock(clockMin)}</span>
+            <span className="topbar__tz">PT</span>
+          </div>
+        )}
 
         <div className="topbar__controls">
-          <button
-            type="button"
-            className={`ctrl ${playing ? 'is-on' : ''}`}
-            onClick={() => setPlaying((p) => !p)}
-          >
-            {playing ? 'Pause' : 'Play'}
-          </button>
-          <div className="speeds" role="group" aria-label="Simulation speed">
-            {SPEEDS.map((s) => (
+          <div className="viewTabs" role="group" aria-label="View">
+            {[
+              { id: 'ops', label: 'Operations' },
+              { id: 'port', label: 'Port' },
+            ].map((v) => (
               <button
-                key={s}
+                key={v.id}
                 type="button"
-                className={`speeds__btn ${speed === s ? 'is-on' : ''}`}
-                onClick={() => setSpeed(s)}
+                className={`viewTabs__btn ${view === v.id ? 'is-on' : ''}`}
+                onClick={() => setView(v.id)}
               >
-                {s}×
+                {v.label}
               </button>
             ))}
           </div>
-          <button type="button" className="ctrl" onClick={reset}>
-            Reset
+
+          {/* The clock only drives the operations view, so hide it on the port map. */}
+          {view === 'ops' && (
+            <>
+              <button
+                type="button"
+                className={`ctrl ${playing ? 'is-on' : ''}`}
+                onClick={() => setPlaying((p) => !p)}
+              >
+                {playing ? 'Pause' : 'Play'}
+              </button>
+              <div className="speeds" role="group" aria-label="Simulation speed">
+                {SPEEDS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`speeds__btn ${speed === s ? 'is-on' : ''}`}
+                    onClick={() => setSpeed(s)}
+                  >
+                    {s}×
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="ctrl" onClick={reset}>
+                Reset
+              </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            className="ctrl"
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          >
+            {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
         </div>
       </header>
 
-      <KpiBar trucks={trucks} containers={containers} chassis={CHASSIS} />
+      {view === 'port' ? (
+        <PortMap theme={theme} />
+      ) : (
+        <>
+          <KpiBar trucks={trucks} containers={containers} chassis={CHASSIS} />
 
-      <main className="layout">
-        <Sidebar
-          trucks={trucks}
-          containers={containers}
-          chassis={CHASSIS}
-          selected={selected}
-          onSelect={select}
-        />
+          <main className="layout">
+            <Sidebar
+              trucks={trucks}
+              containers={containers}
+              chassis={CHASSIS}
+              selected={selected}
+              onSelect={select}
+            />
 
-        <div className="stage">
-          <MapView
-            trucks={trucks}
-            containers={containers}
-            chassis={CHASSIS}
-            layers={layers}
-            theme={theme}
-            selected={selected}
-            onSelect={select}
-            focusTarget={focusTarget}
-          />
+            <div className="stage">
+              <MapView
+                trucks={trucks}
+                containers={containers}
+                chassis={CHASSIS}
+                layers={layers}
+                theme={theme}
+                selected={selected}
+                onSelect={select}
+                focusTarget={focusTarget}
+              />
 
-          <LayerControl
-            layers={layers}
-            onToggle={toggleLayer}
-            showCompleted={showCompleted}
-            onToggleCompleted={() => setShowCompleted((v) => !v)}
-            theme={theme}
-            onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-          />
-        </div>
+              <LayerControl
+                layers={layers}
+                onToggle={toggleLayer}
+                showCompleted={showCompleted}
+                onToggleCompleted={() => setShowCompleted((v) => !v)}
+              />
+            </div>
 
-        <DetailPanel
-          selected={selected}
-          trucks={trucks}
-          containers={containers}
-          chassis={CHASSIS}
-          onSelect={select}
-          onClose={() => setSelected(null)}
-        />
-      </main>
+            <DetailPanel
+              selected={selected}
+              trucks={trucks}
+              containers={containers}
+              chassis={CHASSIS}
+              onSelect={select}
+              onClose={() => setSelected(null)}
+            />
+          </main>
+        </>
+      )}
+
     </div>
   )
 }

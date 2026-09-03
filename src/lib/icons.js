@@ -121,3 +121,15 @@ export function chassisIcon(chassis, selected = false) {
     })
   )
 }
+
+/** Pier code sitting inside a terminal footprint, once it's big enough to read. */
+export function pierLabelIcon(label) {
+  return memo(`pier:${label}`, () =>
+    L.divIcon({
+      className: 'marker marker--pierLabel',
+      iconSize: [46, 20],
+      iconAnchor: [23, 10],
+      html: `<span class="pierLabel">${label}</span>`,
+    })
+  )
+}

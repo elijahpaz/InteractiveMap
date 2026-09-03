@@ -237,7 +237,7 @@ function ChassisDetail({ chassis, onSelect, onClose }) {
   )
 }
 
-function TerminalDetail({ terminal, inbound, onClose }) {
+function TerminalDetail({ terminal, inbound, load, onClose }) {
   return (
     <>
       <Header
@@ -247,6 +247,20 @@ function TerminalDetail({ terminal, inbound, onClose }) {
         badgeColor={terminal.turnTimeMin > 80 ? '#ef4444' : terminal.turnTimeMin > 60 ? '#f59e0b' : '#22c55e'}
         onClose={onClose}
       />
+
+      {load && (
+        <>
+          <div className="loadBar" style={{ '--load': load.level.color }}>
+            <span className="loadBar__fill" style={{ width: `${load.index}%` }} />
+          </div>
+          <div className="fields">
+            <Field label="Gate congestion" value={load.level.label} accent={load.level.color} />
+            <Field label="Trucks queued" value={load.queueTrucks} />
+            <Field label="Est. pick up" value={formatDuration(load.pickupMin)} accent={load.pickupMin > 150 ? '#ef4444' : undefined} />
+            <Field label="Est. drop off" value={formatDuration(load.dropoffMin)} />
+          </div>
+        </>
+      )}
 
       <div className="fields">
         <Field label="Operator" value={terminal.operator} />
@@ -327,6 +341,7 @@ export default function DetailPanel({
   trucks,
   containers,
   chassis,
+  congestion,
   onSelect,
   onClose,
 }) {
@@ -387,7 +402,7 @@ export default function DetailPanel({
     ).length
     return (
       <section className="detail">
-        <TerminalDetail terminal={node} inbound={inbound} onClose={onClose} />
+        <TerminalDetail terminal={node} inbound={inbound} load={congestion?.[id]} onClose={onClose} />
       </section>
     )
   }

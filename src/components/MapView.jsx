@@ -1,11 +1,24 @@
-import { useEffect, useMemo } from 'react'
-import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  MapContainer,
+  Marker,
+  Polygon,
+  Polyline,
+  Popup,
+  TileLayer,
+  Tooltip,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet'
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
+import { HARBOR_BOUNDS, PORTS, TERMINAL_BY_ID } from '../data/terminals.js'
+import { formatDuration } from '../lib/status.js'
 import { spreadPosition } from '../lib/geo.js'
 import {
   chassisIcon,
   clientIcon,
   containerIcon,
+  pierLabelIcon,
   terminalIcon,
   truckIcon,
   yardIcon,
@@ -46,6 +59,29 @@ function SelectionFocus({ target }) {
   return null
 }
 
+/** Frames both ports when the harbour button is pressed. */
+function HarborFocus({ requestKey }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!requestKey) return
+    map.flyToBounds(HARBOR_BOUNDS, { padding: [40, 40], duration: 0.8 })
+  }, [requestKey, map])
+
+  return null
+}
+
+/**
+ * Terminal footprints are real polygons, but at basin zoom they're a few pixels
+ * across. Below the threshold the map shows a marker per terminal; above it,
+ * the actual shape. Reports zoom changes up so both can't draw at once.
+ */
+function ZoomWatch({ onZoom }) {
+  const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) })
+  useEffect(() => onZoom(map.getZoom()), [map, onZoom])
+  return null
+}
+
 /**
  * Group items that share a location so `spreadPosition` can fan them out.
  * Returns a Map of itemId -> {index, total} for its location bucket.
@@ -65,6 +101,8 @@ function bucketByLocation(items, keyFor) {
   return placement
 }
 
+const POLYGON_ZOOM = 12
+
 export default function MapView({
   trucks,
   containers,
@@ -74,7 +112,11 @@ export default function MapView({
   selected,
   onSelect,
   focusTarget,
+  congestion,
+  harborFocusKey,
 }) {
+  const [zoom, setZoom] = useState(10)
+  const showShapes = zoom >= POLYGON_ZOOM
   const basemap = BASEMAPS[theme] ?? BASEMAPS.dark
 
   const isSelected = (type, id) => selected?.type === type && selected?.id === id
@@ -107,11 +149,12 @@ export default function MapView({
       maxZoom={16}
       zoomControl={false}
       className="map"
-      preferCanvas
     >
       <TileLayer url={basemap.base} attribution={basemap.attribution} maxNativeZoom={16} />
       <TileLayer url={basemap.reference} maxNativeZoom={16} zIndex={400} />
       <SelectionFocus target={focusTarget} />
+      <HarborFocus requestKey={harborFocusKey} />
+      <ZoomWatch onZoom={setZoom} />
 
       {layers.routes &&
         trucks
@@ -133,6 +176,67 @@ export default function MapView({
           })}
 
       {layers.terminals &&
+        TERMINALS.map((terminal) => {
+          const active = isSelected('terminal', terminal.id)
+          const load = congestion?.[terminal.id]
+          // Congestion colour wins when the layer is on; otherwise the terminal
+          // is tinted by which port it belongs to.
+          const fill = layers.congestion && load
+            ? load.level.color
+            : PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
+
+          return (
+            <Polygon
+              key={`shape-${terminal.id}`}
+              positions={terminal.boundary}
+              pathOptions={{
+                color: '#ffffff',
+                weight: active ? 2.5 : 1,
+                opacity: showShapes ? 0.85 : 0,
+                fillColor: fill,
+                fillOpacity: showShapes ? (active ? 0.9 : 0.6) : 0,
+              }}
+              eventHandlers={{ click: () => onSelect({ type: 'terminal', id: terminal.id }) }}
+            >
+              <Popup>
+                <div className="gatePopup">
+                  <p className="gatePopup__port">{terminal.port}</p>
+                  <h4 className="gatePopup__name">{terminal.name}</h4>
+                  <p className="gatePopup__berths">{terminal.berth}</p>
+
+                  {load && (
+                    <>
+                      <div
+                        className="gatePopup__level"
+                        style={{ '--load': load.level.color }}
+                      >
+                        <span className="gatePopup__dot" />
+                        {load.level.label} · {load.queueTrucks} trucks queued
+                      </div>
+                      <div className="gatePopup__times">
+                        <div>
+                          <span>Pick up</span>
+                          <strong>{formatDuration(load.pickupMin)}</strong>
+                        </div>
+                        <div>
+                          <span>Drop off</span>
+                          <strong>{formatDuration(load.dropoffMin)}</strong>
+                        </div>
+                      </div>
+                      <p className="gatePopup__note">
+                        Gate {terminal.gateHours} · modelled, not a live feed
+                      </p>
+                    </>
+                  )}
+                </div>
+              </Popup>
+            </Polygon>
+          )
+        })}
+
+      {/* Zoomed out, a shape this small is invisible — show a marker instead. */}
+      {layers.terminals &&
+        !showShapes &&
         TERMINALS.map((terminal) => (
           <Marker
             key={terminal.id}
@@ -144,8 +248,27 @@ export default function MapView({
               <strong>{terminal.name}</strong>
               <br />
               {terminal.berth}
+              {congestion?.[terminal.id] && (
+                <>
+                  <br />
+                  {congestion[terminal.id].level.label} · pick up{' '}
+                  {formatDuration(congestion[terminal.id].pickupMin)}
+                </>
+              )}
             </Tooltip>
           </Marker>
+        ))}
+
+      {/* Pier codes, once the shapes are big enough to hold them. */}
+      {layers.terminals &&
+        showShapes &&
+        TERMINALS.map((terminal) => (
+          <Marker
+            key={`label-${terminal.id}`}
+            position={terminal.position}
+            interactive={false}
+            icon={pierLabelIcon(TERMINAL_BY_ID[terminal.id]?.label ?? '')}
+          />
         ))}
 
       {layers.yards &&

@@ -1,32 +1,11 @@
 # Drayage Ops Map
 
-An interactive map for port drayage around San Pedro Bay (Port of Los Angeles /
-Port of Long Beach). It has two views, switched from the top bar.
-
-## Port view
-
-A quiet, minimal map of the **13 container terminals** of San Pedro Bay — 7 at
-the Port of Los Angeles, 6 at the Port of Long Beach. Container terminals only;
-the dry bulk, liquid bulk, break-bulk and RoRo tenants are excluded.
-
-Modelled on the [Port of Long Beach's own port map](https://polb.com/port-info/map/):
-a desaturated basemap, flat pier shapes, one short label per terminal, and a
-panel that lists rather than decorates. Click a terminal to zoom to it and see
-its operator and berths; filter to one port; hover to highlight.
-
-**Solid outlines are real. Dashed outlines are approximate.** The seven POLA
-terminals use OpenStreetMap polygons. The six POLB terminals are not
-polygonised in OSM, so each is a footprint anchored on the measured extent of
-that pier's own named streets and rail leads — right position, rough shape, not
-a survey boundary. The map draws that distinction so you never have to guess
-which kind you're looking at.
-
-## Operations view
-
-The dispatch board. It shows, on one canvas:
+An interactive dispatch map for port drayage around San Pedro Bay (Port of Los
+Angeles / Port of Long Beach). One map, one canvas:
 
 - **Fleet** — where every truck is, what it's doing, and the leg it's running
-- **Terminals** — all 13 container terminals (shared with the port view)
+- **Terminals** — all 13 container terminals as their real footprints, shaded
+  by gate congestion, with pick-up / drop-off estimates in a click
 - **Clients** — delivery locations, receiving hours and detention history
 - **Yards** — the home yard and overflow depot, with slot utilisation
 - **Containers** — every box that isn't completed, coloured by demurrage risk
@@ -34,6 +13,56 @@ The dispatch board. It shows, on one canvas:
 
 Trucks run a repeating three-leg tour (yard → terminal → client → yard) on a
 simulated clock, so the map behaves like a live board rather than a snapshot.
+Hit **Harbor** in the top bar to frame both ports.
+
+## Terminals
+
+The 13 container terminals of San Pedro Bay — 7 at POLA, 6 at POLB. Container
+terminals only; the dry bulk, liquid bulk, break-bulk and RoRo tenants are
+excluded.
+
+Below zoom 12 each terminal is a marker; above it, the real polygon with its
+pier code. **Every footprint is real geometry**, from two sources:
+
+| Terminals | Source |
+| --- | --- |
+| 6 POLB | Official Port of Long Beach pier boundaries, ArcGIS `Piers` FeatureServer |
+| 7 POLA | OpenStreetMap polygons (© OpenStreetMap contributors, ODbL) |
+
+Both are simplified with Douglas-Peucker for payload size. OSM still files three
+POLA terminals under legacy tenant names — *China Shipping* and *Yang Ming* for
+the two WBCT terminals, *Evergreen* for Everport.
+
+## Gate congestion
+
+Terminals shade green → yellow → orange → red by gate congestion, and clicking
+one opens a popup with **estimated pick-up and drop-off time** and the current
+queue. The same figures appear in the detail panel, and the KPI strip counts how
+many gates are backed up.
+
+**This is a model, not a live feed — and that matters.** There is no free public
+API for real-time congestion at San Pedro Bay. POLB publishes gate hours "powered
+by BlueCargo" and POLA runs Port Optimizer; both are commercial products behind
+authentication with no open endpoint, and real turn times are surveyed by the
+Harbor Trucking Association, also not public.
+
+So `src/lib/congestion.js` models the *shape* real congestion takes — a morning
+peak after the gates open, an afternoon peak before they close, a quiet night,
+and a per-terminal baseline reflecting how that terminal normally performs. It's
+steady and repeatable rather than random, so the map behaves the way a dispatcher
+would expect. The numbers are still invented, and every surface that shows them
+says so.
+
+To make it real, replace `congestionFor` with a lookup against live data. Every
+consumer reads the same object, so nothing else changes:
+
+```js
+{ index, level, queueTrucks, waitMin, turnMin, pickupMin, dropoffMin }
+```
+
+Candidate feeds: BlueCargo, Port Optimizer Control Tower, terminal appointment
+systems (eModal / Voyage Control) — or your own drivers' dwell times, which you
+already have.
 
 ## Running it
 
@@ -54,12 +83,13 @@ npm run preview  # serve that bundle locally
 ```
 src/
   data/
-    terminals.js   the 13 container terminals — sourced, with provenance notes
+    terminals.js   the 13 container terminals — real geometry, provenance noted
     network.js     re-exports terminals; adds yards and clients (invented)
     corridors.js   hand-traced freeway polylines through the LA basin
     fleet.js       truck roster; each unit declares its yard/terminal/client
     equipment.js   containers and chassis
   lib/
+    congestion.js  the congestion model, and the seam to a real feed
     routing.js     composes corridors into legs and three-leg tours
     geo.js         distance, interpolation along a route, marker fan-out
     status.js      every status label and colour, in one place
@@ -67,8 +97,7 @@ src/
   hooks/
     useSimulation.js  the clock: advances trucks, dwells at stops, redispatches
   components/
-    PortMap.jsx    the port view — terminal outlines, labels, filter, detail
-    MapView.jsx    the operations map and all its layers
+    MapView.jsx    the map — fleet, terminals, congestion, equipment, routes
     Sidebar.jsx    searchable fleet / boxes / chassis / network lists
     DetailPanel.jsx per-entity detail, with links between related records
     LayerControl.jsx layer toggles, theme switch and legend
@@ -94,6 +123,7 @@ The seams are deliberate:
 | Route geometry | `lib/routing.js` → `buildRoute` | Return provider geometry instead of composed corridors |
 | Nodes and roster | `src/data/*.js` | Fetch from the TMS rather than importing constants |
 | Demurrage clocks | `lib/status.js` → `demurrageRisk` | Feed real last-free-day dates in place of `lfdOffsetDays` |
+| Gate congestion | `lib/congestion.js` → `congestionFor` | Return live figures in the same shape |
 
 Demo data uses `lfdOffsetDays` (days relative to today) rather than fixed dates
 so the risk colours stay meaningful whenever you open it.
@@ -106,10 +136,11 @@ worse than obviously fake data. The split:
 | Real | Invented |
 | --- | --- |
 | All 13 terminal names, operators, piers, berths | Every truck, driver, plate |
-| POLA terminal outlines (OpenStreetMap, ODbL) | Every container number, BOL, weight |
+| All 13 terminal footprints (POLB GIS + OSM) | Every container number, BOL, weight |
 | Freeway corridors and warehouse cities | Every chassis ID and inspection date |
 | Drayage terminology and mechanics | All 8 client companies and both yards |
 | | Gate hours, turn times, appointment flags |
+| | **All congestion figures and time estimates** |
 
 Anything under a `demo` key, and everything in `YARDS` / `CLIENTS`, is a
 placeholder. The client companies are invented names on real street names — they
@@ -119,7 +150,9 @@ real terminal names; do not quote them.
 Sources for the real parts:
 [POLA container terminals](https://portoflosangeles.org/business/terminals/container),
 [POLB containerized tenants](https://polb.com/cargo-nav/port-facilities),
-terminal outlines © OpenStreetMap contributors (ODbL).
+[POLB gate hours](https://polb.com/port-info/gate-hours/),
+POLB pier boundaries (ArcGIS `Piers` FeatureServer),
+POLA outlines © OpenStreetMap contributors (ODbL).
 
 ### Known gaps in the mock data
 
@@ -132,7 +165,6 @@ real data lands:
 - Containers don't change status as their truck completes legs.
 - Routes are traced freeway polylines, not routed geometry — no traffic, no turn
   restrictions, and ETAs come from a flat 38 mph average.
-- The six POLB terminal footprints are rectangles, not real pier shapes.
 
 ## Basemap
 

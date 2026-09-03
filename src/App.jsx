@@ -3,12 +3,13 @@ import DetailPanel from './components/DetailPanel.jsx'
 import KpiBar from './components/KpiBar.jsx'
 import LayerControl from './components/LayerControl.jsx'
 import MapView from './components/MapView.jsx'
-import PortMap from './components/PortMap.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { CHASSIS, CONTAINERS } from './data/equipment.js'
 import { NODES } from './data/network.js'
 import { useSimulation } from './hooks/useSimulation.js'
 import { isLiveContainer } from './lib/status.js'
+import { congestionSnapshot } from './lib/congestion.js'
+import { CONTAINER_TERMINALS } from './data/terminals.js'
 
 const DEFAULT_LAYERS = {
   fleet: true,
@@ -18,6 +19,7 @@ const DEFAULT_LAYERS = {
   yards: true,
   containers: true,
   chassis: false,
+  congestion: true,
 }
 
 const SPEEDS = [1, 4, 12]
@@ -31,7 +33,7 @@ function formatClock(totalMinutes) {
 export default function App() {
   const { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset } = useSimulation()
 
-  const [view, setView] = useState('ops')
+  const [harborFocusKey, setHarborFocusKey] = useState(0)
   const [layers, setLayers] = useState(DEFAULT_LAYERS)
   const [theme, setTheme] = useState('dark')
   const [showCompleted, setShowCompleted] = useState(false)
@@ -42,6 +44,11 @@ export default function App() {
   const containers = useMemo(
     () => (showCompleted ? CONTAINERS : CONTAINERS.filter(isLiveContainer)),
     [showCompleted]
+  )
+
+  const congestion = useMemo(
+    () => congestionSnapshot(CONTAINER_TERMINALS.map((t) => t.id), Math.floor(clockMin)),
+    [Math.floor(clockMin)] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   const toggleLayer = useCallback(
@@ -77,7 +84,7 @@ export default function App() {
   }, [selected, containers])
 
   return (
-    <div className={`app app--${theme} ${view === 'port' ? 'app--port' : ''}`}>
+    <div className={`app app--${theme}`}>
       <header className="topbar">
         <div className="topbar__brand">
           <span className="topbar__mark" aria-hidden="true">
@@ -94,34 +101,21 @@ export default function App() {
           </div>
         </div>
 
-        {view === 'ops' && (
-          <div className="topbar__clock">
-            <span className="topbar__time">{formatClock(clockMin)}</span>
-            <span className="topbar__tz">PT</span>
-          </div>
-        )}
+        <div className="topbar__clock">
+          <span className="topbar__time">{formatClock(clockMin)}</span>
+          <span className="topbar__tz">PT</span>
+        </div>
 
         <div className="topbar__controls">
-          <div className="viewTabs" role="group" aria-label="View">
-            {[
-              { id: 'ops', label: 'Operations' },
-              { id: 'port', label: 'Port' },
-            ].map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                className={`viewTabs__btn ${view === v.id ? 'is-on' : ''}`}
-                onClick={() => setView(v.id)}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            className="ctrl"
+            onClick={() => setHarborFocusKey((k) => k + 1)}
+          >
+            Harbor
+          </button>
 
-          {/* The clock only drives the operations view, so hide it on the port map. */}
-          {view === 'ops' && (
-            <>
-              <button
+          <button
                 type="button"
                 className={`ctrl ${playing ? 'is-on' : ''}`}
                 onClick={() => setPlaying((p) => !p)}
@@ -140,11 +134,9 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <button type="button" className="ctrl" onClick={reset}>
-                Reset
-              </button>
-            </>
-          )}
+          <button type="button" className="ctrl" onClick={reset}>
+            Reset
+          </button>
 
           <button
             type="button"
@@ -156,53 +148,49 @@ export default function App() {
         </div>
       </header>
 
-      {view === 'port' ? (
-        <PortMap theme={theme} />
-      ) : (
-        <>
-          <KpiBar trucks={trucks} containers={containers} chassis={CHASSIS} />
+      <KpiBar trucks={trucks} containers={containers} chassis={CHASSIS} congestion={congestion} />
 
-          <main className="layout">
-            <Sidebar
-              trucks={trucks}
-              containers={containers}
-              chassis={CHASSIS}
-              selected={selected}
-              onSelect={select}
-            />
+      <main className="layout">
+        <Sidebar
+          trucks={trucks}
+          containers={containers}
+          chassis={CHASSIS}
+          selected={selected}
+          onSelect={select}
+        />
 
-            <div className="stage">
-              <MapView
-                trucks={trucks}
-                containers={containers}
-                chassis={CHASSIS}
-                layers={layers}
-                theme={theme}
-                selected={selected}
-                onSelect={select}
-                focusTarget={focusTarget}
-              />
+        <div className="stage">
+          <MapView
+            trucks={trucks}
+            containers={containers}
+            chassis={CHASSIS}
+            layers={layers}
+            theme={theme}
+            selected={selected}
+            onSelect={select}
+            focusTarget={focusTarget}
+            congestion={congestion}
+            harborFocusKey={harborFocusKey}
+          />
 
-              <LayerControl
-                layers={layers}
-                onToggle={toggleLayer}
-                showCompleted={showCompleted}
-                onToggleCompleted={() => setShowCompleted((v) => !v)}
-              />
-            </div>
+          <LayerControl
+            layers={layers}
+            onToggle={toggleLayer}
+            showCompleted={showCompleted}
+            onToggleCompleted={() => setShowCompleted((v) => !v)}
+          />
+        </div>
 
-            <DetailPanel
-              selected={selected}
-              trucks={trucks}
-              containers={containers}
-              chassis={CHASSIS}
-              onSelect={select}
-              onClose={() => setSelected(null)}
-            />
-          </main>
-        </>
-      )}
-
+        <DetailPanel
+          selected={selected}
+          trucks={trucks}
+          containers={containers}
+          chassis={CHASSIS}
+          congestion={congestion}
+          onSelect={select}
+          onClose={() => setSelected(null)}
+        />
+      </main>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { TERMINALS } from '../data/network.js'
-import { TRUCK_STATUS, demurrageRisk } from '../lib/status.js'
+import { TRUCK_STATUS, demurrageRisk, formatDuration } from '../lib/status.js'
 
 /** Detention generally starts biting around the two-hour mark. */
 const DETENTION_THRESHOLD_MIN = 120
@@ -16,7 +16,7 @@ function Kpi({ label, value, sub, tone = 'neutral', onClick }) {
   )
 }
 
-export default function KpiBar({ trucks, containers, chassis }) {
+export default function KpiBar({ trucks, containers, chassis, congestion }) {
   const stats = useMemo(() => {
     const active = trucks.filter((t) => TRUCK_STATUS[t.status]?.group === 'active').length
     const idle = trucks.filter((t) => t.status === 'idle').length
@@ -37,8 +37,14 @@ export default function KpiBar({ trucks, containers, chassis }) {
       TERMINALS.reduce((sum, t) => sum + t.turnTimeMin, 0) / TERMINALS.length
     )
 
-    return { active, idle, atRisk, availableChassis, oosChassis, detained, avgTurn }
-  }, [trucks, containers, chassis])
+    const loads = Object.values(congestion ?? {})
+    const congested = loads.filter(
+      (l) => l.level.key === 'heavy' || l.level.key === 'severe'
+    ).length
+    const worstWait = loads.length ? Math.max(...loads.map((l) => l.pickupMin)) : 0
+
+    return { active, idle, atRisk, availableChassis, oosChassis, detained, avgTurn, congested, worstWait }
+  }, [trucks, containers, chassis, congestion])
 
   return (
     <div className="kpis">
@@ -66,7 +72,12 @@ export default function KpiBar({ trucks, containers, chassis }) {
         sub={`${stats.oosChassis} out of service`}
         tone={stats.availableChassis < 3 ? 'warn' : 'good'}
       />
-      <Kpi label="Avg turn time" value={`${stats.avgTurn}m`} sub={`across ${TERMINALS.length} terminals`} tone="neutral" />
+      <Kpi
+        label="Gates backed up"
+        value={stats.congested}
+        sub={`of ${TERMINALS.length} · worst ${formatDuration(stats.worstWait)}`}
+        tone={stats.congested > 6 ? 'danger' : stats.congested > 3 ? 'warn' : 'good'}
+      />
       <Kpi label="Live boxes" value={containers.length} sub="not yet completed" tone="neutral" />
     </div>
   )

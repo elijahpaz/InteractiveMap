@@ -1012,165 +1012,6 @@ body {
   }
 }
 
-/* ---------------------------------------------------------------------------
-   Port view — the fixed landside map of the container terminals. Modelled on
-   the POLB port map: quiet basemap, flat pier shapes, one short label each,
-   and a panel that lists rather than decorates.
---------------------------------------------------------------------------- */
-
-.portView {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  min-height: 0;
-}
-
-.portPanel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--line);
-}
-
-.portPanel__head {
-  padding: 16px 16px 12px;
-}
-
-.portPanel__head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 640;
-  letter-spacing: -0.01em;
-}
-
-.portPanel__head p {
-  margin: 3px 0 0;
-  font-size: 11.5px;
-  color: var(--text-faint);
-}
-
-.portPanel__filter {
-  display: flex;
-  gap: 1px;
-  margin: 0 16px 12px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.portPanel__filterBtn {
-  flex: 1;
-  padding: 7px 6px;
-  font: inherit;
-  font-size: 11.5px;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 0;
-  cursor: pointer;
-}
-
-.portPanel__filterBtn.is-on {
-  color: var(--text);
-  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
-}
-
-.portPanel__list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.portPanel__group {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0;
-  padding: 12px 16px 6px;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--port);
-}
-
-.portPanel__group span {
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.pierRow {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 8px 16px;
-  font: inherit;
-  text-align: left;
-  color: inherit;
-  background: none;
-  border: 0;
-  border-left: 3px solid transparent;
-  cursor: pointer;
-}
-
-.pierRow:hover {
-  background: var(--surface-2);
-}
-
-.pierRow.is-active {
-  border-left-color: var(--port);
-  background: color-mix(in srgb, var(--port) 14%, var(--surface));
-}
-
-.pierRow__code {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 24px;
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #fff;
-  background: var(--port);
-  border-radius: 5px;
-}
-
-.pierRow__text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.pierRow__name {
-  font-size: 12.5px;
-  font-weight: 540;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pierRow__berths {
-  font-size: 10.5px;
-  color: var(--text-faint);
-}
-
-.portPanel__source {
-  margin: 0;
-  padding: 12px 16px;
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: var(--text-faint);
-  border-top: 1px solid var(--line);
-}
-
-.portStage {
-  position: relative;
-  min-width: 0;
-}
-
 /* Pier labels sit inside the shapes, like the POLB map's big letters. */
 .pierLabel {
   display: grid;
@@ -1193,132 +1034,136 @@ body {
   opacity: 0.35;
 }
 
-.pierDetail {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 500;
-  width: 288px;
-  padding: 14px 16px;
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
-  backdrop-filter: blur(10px);
+/* ---------------------------------------------------------------------------
+   Gate congestion — the popup that opens on a terminal footprint, and the
+   load bar in the detail panel.
+--------------------------------------------------------------------------- */
+
+.leaflet-popup-content-wrapper {
+  padding: 0;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 11px;
   box-shadow: var(--shadow);
 }
 
-.pierDetail__close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-faint);
-  background: none;
-  border: 0;
-  cursor: pointer;
+.leaflet-popup-content {
+  margin: 0;
+  width: 232px !important;
 }
 
-.pierDetail__port {
-  margin: 0 0 3px;
-  font-size: 10px;
+.leaflet-popup-tip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.leaflet-popup-close-button {
+  color: var(--text-faint) !important;
+  padding: 8px 8px 0 0 !important;
+}
+
+.gatePopup {
+  padding: 12px 14px;
+  color: var(--text);
+}
+
+.gatePopup__port {
+  margin: 0 0 2px;
+  font-size: 9.5px;
   font-weight: 650;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+  color: var(--text-faint);
 }
 
-.pierDetail__name {
-  margin: 0 0 11px;
-  padding-right: 18px;
-  font-size: 15px;
+.gatePopup__name {
+  margin: 0 0 2px;
+  padding-right: 14px;
+  font-size: 13.5px;
   font-weight: 620;
   line-height: 1.25;
-  letter-spacing: -0.01em;
 }
 
-.pierDetail__facts {
+.gatePopup__berths {
+  margin: 0 0 10px;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.gatePopup__level {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--load);
+  background: color-mix(in srgb, var(--load) 14%, transparent);
+  border-radius: 7px;
+}
+
+.gatePopup__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--load);
+}
+
+.gatePopup__times {
   display: grid;
-  gap: 8px;
-  margin: 0 0 11px;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 9px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.pierDetail__facts div {
-  display: grid;
-  grid-template-columns: 74px 1fr;
-  gap: 10px;
-  align-items: baseline;
+.gatePopup__times div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  background: var(--surface);
 }
 
-.pierDetail__facts dt {
-  font-size: 10px;
+.gatePopup__times span {
+  font-size: 9.5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
 
-.pierDetail__facts dd {
-  margin: 0;
-  font-size: 12.5px;
-  font-weight: 520;
+.gatePopup__times strong {
+  font-size: 14px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
 }
 
-.pierDetail__note {
-  margin: 0;
-  padding-top: 10px;
-  font-size: 10.5px;
-  line-height: 1.5;
+.gatePopup__note {
+  margin: 9px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
   color: var(--text-faint);
-  border-top: 1px solid var(--line);
 }
 
-/* View switcher in the top bar. */
-.viewTabs {
-  display: flex;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.viewTabs__btn {
-  padding: 6px 14px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-faint);
+.loadBar {
+  height: 6px;
   background: var(--surface-2);
-  border: 0;
-  border-right: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.loadBar__fill {
+  display: block;
+  height: 100%;
+  background: var(--load);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+/* Terminal footprints are clickable, so say so on hover. */
+.leaflet-interactive {
   cursor: pointer;
-}
-
-.viewTabs__btn:last-child {
-  border-right: 0;
-}
-
-.viewTabs__btn.is-on {
-  color: var(--text);
-  background: color-mix(in srgb, var(--accent) 22%, var(--surface-2));
-}
-
-@media (max-width: 900px) {
-  .portView {
-    grid-template-columns: 1fr;
-  }
-  .portPanel {
-    max-height: 300px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .portStage {
-    height: 60vh;
-  }
-  .pierDetail {
-    right: 10px;
-    left: 10px;
-    width: auto;
-  }
-}
-
-/* The port view has no KPI strip, so the app grid is two rows there. */
-.app--port {
-  grid-template-rows: auto 1fr;
 }

@@ -4,30 +4,29 @@
  * bulk, break-bulk and RoRo tenants at both ports are deliberately excluded.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * PROVENANCE — every field is one of three kinds. Check before trusting one.
+ * PROVENANCE — check before trusting a field.
  *
  *   SOURCED  `name`, `operator`, `port`, `pier`, `berths`
- *       From the port authorities themselves:
+ *       From the port authorities:
  *       POLA  portoflosangeles.org/business/terminals/container
  *       POLB  polb.com/cargo-nav/port-facilities  (Containerized Tenants)
  *
- *   SOURCED  `boundary` for the 7 POLA terminals
- *       Real polygons from OpenStreetMap (© OpenStreetMap contributors, ODbL),
- *       simplified with Douglas-Peucker to ~12-19 points each. OSM still files
- *       three of them under legacy tenant names — China Shipping and Yang Ming
- *       for the two WBCT terminals, Evergreen for Everport.
- *
- *   DERIVED  `boundary` for the 6 POLB terminals
- *       Not polygonised in OSM. Each is a rectangle anchored on the measured
- *       extent of that pier's own named streets and rail leads (Pier G Avenue,
- *       Pier J Avenue, Pier T Avenue, and so on). Right position and rough
- *       size; NOT a survey boundary, lease line, or legal parcel.
+ *   SOURCED  `boundary` — every terminal, real geometry, no approximations
+ *       boundarySource 'polb-gis' (6)  Official Port of Long Beach pier
+ *           boundaries, ArcGIS FeatureServer "Piers" published by POLB.
+ *       boundarySource 'osm' (7)  OpenStreetMap polygons (© OpenStreetMap
+ *           contributors, ODbL). OSM still files three under legacy tenant
+ *           names — China Shipping and Yang Ming for the two WBCT terminals,
+ *           Evergreen for Everport.
+ *       Both sets are simplified with Douglas-Peucker for payload size; the
+ *       shapes are the real footprints, not boxes drawn around a point.
  *
  *   SIMULATED  everything under `demo`
- *       Invented placeholders so the ops views have something to render. Real
- *       gate hours are published per terminal and change constantly; real turn
- *       times come from a feed such as the Harbor Trucking Association survey
- *       or BlueCargo. Never quote anything under `demo` as fact.
+ *       Invented placeholders. Real gate hours are published per terminal and
+ *       change constantly (polb.com/port-info/gate-hours/, data powered by
+ *       BlueCargo — a commercial feed with no public API). Real turn times come
+ *       from a feed such as the Harbor Trucking Association survey. Never quote
+ *       anything under `demo` as fact.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -180,27 +179,35 @@ export const CONTAINER_TERMINALS = [
     pier: 'Pier A',
     berths: 'A88-A96',
     label: 'A',
-    boundarySource: 'derived',
-    position: [33.7726, -118.2335],
+    boundarySource: 'polb-gis',
+    position: [33.76992, -118.23632],
     boundary: [
-      [33.769, -118.2402], [33.7762, -118.2402], [33.7762, -118.2268],
-      [33.769, -118.2268], [33.769, -118.2402],
+      [33.77007, -118.22691], [33.76745, -118.23819], [33.76771, -118.23828],
+      [33.76702, -118.23969], [33.76709, -118.24022], [33.76685, -118.24019],
+      [33.76708, -118.24031], [33.76681, -118.24112], [33.76701, -118.24132],
+      [33.76779, -118.24029], [33.78106, -118.24163], [33.78206, -118.22727],
+      [33.77056, -118.2261], [33.77028, -118.22698], [33.77007, -118.22691],
     ],
     demo: { turnTimeMin: 69, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-SSA-C',
     name: 'SSA Terminals — Pier C',
-    operator: 'SSA Terminals LLC',
+    operator: 'SSA Terminals LLC (Matson)',
     port: 'POLB',
     pier: 'Pier C',
     berths: 'C60-C62',
     label: 'C',
-    boundarySource: 'derived',
-    position: [33.7728, -118.211],
+    boundarySource: 'polb-gis',
+    position: [33.77231, -118.21311],
     boundary: [
-      [33.77, -118.2152], [33.7756, -118.2152], [33.7756, -118.2068],
-      [33.77, -118.2068], [33.77, -118.2152],
+      [33.7773, -118.2067], [33.77278, -118.20672], [33.77225, -118.20805],
+      [33.77313, -118.20853], [33.77312, -118.20931], [33.77189, -118.21242],
+      [33.77158, -118.21243], [33.7719, -118.21156], [33.77102, -118.21372],
+      [33.77144, -118.21355], [33.77113, -118.21386], [33.77128, -118.21444],
+      [33.77103, -118.21431], [33.76891, -118.21967], [33.76933, -118.22065],
+      [33.77094, -118.22067], [33.77261, -118.21796], [33.77279, -118.21806],
+      [33.77566, -118.21003], [33.7762, -118.2096], [33.7773, -118.2067],
     ],
     demo: { turnTimeMin: 54, gateHours: '07:00 - 16:30', appointmentRequired: false, dualTransaction: false },
   },
@@ -212,11 +219,16 @@ export const CONTAINER_TERMINALS = [
     pier: 'Pier E (Middle Harbor)',
     berths: 'E24-E26',
     label: 'E',
-    boundarySource: 'derived',
-    position: [33.759, -118.211],
+    boundarySource: 'polb-gis',
+    position: [33.75582, -118.21155],
     boundary: [
-      [33.7528, -118.2172], [33.7652, -118.2172], [33.7652, -118.2048],
-      [33.7528, -118.2048], [33.7528, -118.2172],
+      [33.76068, -118.20648], [33.75422, -118.20648], [33.75347, -118.20674],
+      [33.75199, -118.20867], [33.74926, -118.21384], [33.74771, -118.21442],
+      [33.74785, -118.2152], [33.74886, -118.21492], [33.74909, -118.21546],
+      [33.74918, -118.21525], [33.75096, -118.21525], [33.75095, -118.21387],
+      [33.7628, -118.21385], [33.76281, -118.21508], [33.7664, -118.21509],
+      [33.76712, -118.20781], [33.76301, -118.20713], [33.76258, -118.20726],
+      [33.76173, -118.20667], [33.76068, -118.20648],
     ],
     demo: { turnTimeMin: 44, gateHours: '06:00 - 02:00', appointmentRequired: true, dualTransaction: true },
   },
@@ -228,11 +240,22 @@ export const CONTAINER_TERMINALS = [
     pier: 'Pier G',
     berths: 'G226-G236',
     label: 'G',
-    boundarySource: 'derived',
-    position: [33.7505, -118.205],
+    boundarySource: 'polb-gis',
+    position: [33.74879, -118.19869],
     boundary: [
-      [33.7448, -118.2112], [33.7562, -118.2112], [33.7562, -118.1988],
-      [33.7448, -118.1988], [33.7448, -118.2112],
+      [33.74832, -118.19873], [33.74815, -118.19894], [33.7438, -118.19894],
+      [33.7438, -118.20368], [33.74459, -118.20375], [33.74463, -118.20624],
+      [33.74503, -118.20649], [33.75027, -118.20648], [33.75101, -118.20708],
+      [33.75163, -118.20609], [33.75599, -118.20613], [33.75599, -118.20538],
+      [33.76003, -118.20539], [33.76149, -118.20598], [33.76301, -118.20708],
+      [33.76301, -118.20624], [33.75964, -118.20413], [33.75734, -118.20139],
+      [33.75574, -118.20015], [33.75313, -118.1953], [33.74837, -118.18971],
+      [33.74221, -118.18748], [33.74209, -118.18797], [33.74248, -118.18855],
+      [33.74237, -118.19018], [33.74197, -118.1899], [33.74159, -118.19114],
+      [33.74199, -118.19175], [33.74313, -118.1919], [33.74313, -118.19239],
+      [33.7438, -118.19238], [33.7438, -118.19745], [33.74477, -118.19699],
+      [33.74503, -118.19699], [33.74503, -118.19729], [33.74815, -118.19728],
+      [33.74832, -118.19873],
     ],
     demo: { turnTimeMin: 75, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
@@ -244,11 +267,17 @@ export const CONTAINER_TERMINALS = [
     pier: 'Pier T',
     berths: 'T132-T140',
     label: 'T',
-    boundarySource: 'derived',
-    position: [33.7553, -118.226],
+    boundarySource: 'polb-gis',
+    position: [33.75113, -118.22999],
     boundary: [
-      [33.7478, -118.2332], [33.7628, -118.2332], [33.7628, -118.2188],
-      [33.7478, -118.2188], [33.7478, -118.2332],
+      [33.75526, -118.24871], [33.75731, -118.24287], [33.76133, -118.22916],
+      [33.76422, -118.22181], [33.75932, -118.21947], [33.75835, -118.22016],
+      [33.75542, -118.21889], [33.75536, -118.21858], [33.75371, -118.21857],
+      [33.75242, -118.22298], [33.75687, -118.22484], [33.75592, -118.22895],
+      [33.75557, -118.22881], [33.75087, -118.24477], [33.74359, -118.24172],
+      [33.74196, -118.23139], [33.74534, -118.21969], [33.74445, -118.2175],
+      [33.74045, -118.2312], [33.74037, -118.23201], [33.74197, -118.24125],
+      [33.743, -118.24296], [33.74286, -118.24351], [33.75526, -118.24871],
     ],
     demo: { turnTimeMin: 83, gateHours: '07:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
@@ -260,16 +289,24 @@ export const CONTAINER_TERMINALS = [
     pier: 'Pier J',
     berths: 'J245-J270',
     label: 'J',
-    boundarySource: 'derived',
-    position: [33.7425, -118.189],
+    boundarySource: 'polb-gis',
+    position: [33.73882, -118.1947],
     boundary: [
-      [33.7352, -118.1958], [33.7498, -118.1958], [33.7498, -118.1822],
-      [33.7352, -118.1822], [33.7352, -118.1958],
+      [33.73298, -118.1877], [33.73297, -118.19575], [33.73348, -118.19632],
+      [33.73569, -118.19635], [33.73627, -118.19697], [33.7364, -118.20239],
+      [33.73854, -118.20411], [33.73882, -118.20452], [33.73858, -118.20495],
+      [33.73926, -118.20415], [33.73995, -118.2025], [33.74043, -118.2024],
+      [33.74046, -118.2027], [33.74062, -118.2024], [33.74067, -118.19538],
+      [33.74313, -118.19239], [33.74313, -118.1919], [33.74199, -118.19175],
+      [33.7416, -118.19121], [33.74197, -118.1899], [33.74237, -118.19018],
+      [33.74248, -118.18855], [33.74209, -118.18797], [33.74221, -118.18748],
+      [33.73858, -118.1862], [33.73859, -118.19389], [33.73789, -118.1946],
+      [33.73658, -118.19458], [33.73657, -118.18567], [33.73604, -118.18536],
+      [33.73301, -118.18539], [33.73298, -118.1877],
     ],
     demo: { turnTimeMin: 67, gateHours: '07:00 - 17:00', appointmentRequired: false, dualTransaction: false },
   },]
 
-/** Terminals grouped by port, for the two-section panel list. */
 export const TERMINALS_BY_PORT = {
   POLA: CONTAINER_TERMINALS.filter((t) => t.port === 'POLA'),
   POLB: CONTAINER_TERMINALS.filter((t) => t.port === 'POLB'),
@@ -283,5 +320,5 @@ export const TERMINAL_BY_ID = Object.fromEntries(
 export const HARBOR_CENTER = [33.7480, -118.2260]
 export const HARBOR_BOUNDS = [
   [33.7180, -118.2900],
-  [33.7800, -118.1750],
+  [33.7830, -118.1800],
 ]

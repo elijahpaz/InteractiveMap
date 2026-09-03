@@ -1,4 +1,5 @@
 import { CHASSIS_STATUS, TRUCK_STATUS } from '../lib/status.js'
+import { CONGESTION_LEVELS } from '../lib/congestion.js'
 
 const LAYERS = [
   { id: 'fleet', label: 'Fleet', swatch: '#4f9cf9' },
@@ -8,6 +9,7 @@ const LAYERS = [
   { id: 'yards', label: 'Yards', swatch: '#22c55e' },
   { id: 'containers', label: 'Containers', swatch: '#eab308' },
   { id: 'chassis', label: 'Chassis', swatch: '#94a3b8' },
+  { id: 'congestion', label: 'Gate congestion', swatch: '#f97316' },
 ]
 
 export default function LayerControl({ layers, onToggle, showCompleted, onToggleCompleted }) {
@@ -47,6 +49,16 @@ export default function LayerControl({ layers, onToggle, showCompleted, onToggle
         <p className="legend__title">Truck status</p>
         <ul>
           {Object.entries(TRUCK_STATUS).map(([key, meta]) => (
+            <li key={key}>
+              <span className="legend__dot" style={{ background: meta.color }} />
+              {meta.label}
+            </li>
+          ))}
+        </ul>
+
+        <p className="legend__title">Gate congestion</p>
+        <ul>
+          {Object.entries(CONGESTION_LEVELS).map(([key, meta]) => (
             <li key={key}>
               <span className="legend__dot" style={{ background: meta.color }} />
               {meta.label}

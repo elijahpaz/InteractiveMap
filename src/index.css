@@ -1527,3 +1527,81 @@ body {
 .rec__margin.is-thin {
   color: #f59e0b;
 }
+
+/* ---------------------------------------------------------------------------
+   Published gate status. Open / Closed / Not posted are the three real states
+   the port publishes; "unknown" is a fourth for ports that publish nothing,
+   and it must never look like one of the other three.
+--------------------------------------------------------------------------- */
+
+.gatePopup__shifts,
+.gateBox__shifts {
+  display: grid;
+  gap: 1px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gatePopup__shifts li,
+.gateBox__shifts li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 9px;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--surface);
+}
+
+.shift {
+  font-size: 11.5px;
+  font-weight: 620;
+}
+
+.shift--open { color: #22c55e; }
+.shift--closed { color: #ef4444; }
+.shift--tbd { color: var(--text-faint); font-weight: 500; font-style: italic; }
+
+.gateBox {
+  padding: 10px 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.gateBox--unknown {
+  border-style: dashed;
+}
+
+.gateBox__title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.gateBox__note {
+  margin: 8px 0 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.gatePopup__note--unknown {
+  padding: 8px 9px;
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+}
+
+.metric--unknown .metric__value {
+  color: var(--text-faint);
+}

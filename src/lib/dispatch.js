@@ -3,6 +3,7 @@ import { NODES } from '../data/network.js'
 import { CONTAINER_TERMINALS, TERMINAL_BY_ID } from '../data/terminals.js'
 import { moveEconomics } from './economics.js'
 import { haversine } from './geo.js'
+import { gateStatusFor, shiftSummary } from './gates.js'
 
 /**
  * Turning conditions into a recommendation.
@@ -18,12 +19,15 @@ import { haversine } from './geo.js'
  *
  *   - Demurrage dominates. A day of demurrage on one box outweighs the fuel on
  *     any realistic deadhead in this basin, so urgency carries the most weight.
- *   - Time in a queue is the scarce resource. A driver stuck three hours at a
- *     gate is a driver not doing a second turn, so gate time is penalised
- *     harder than distance.
- *   - Distance still matters, but least of the three. Deadhead is a real cost
- *     and it is the one dispatchers over-weight by eye, because it is the one
- *     they can see.
+ *   - Distance is the other term, and the only other one we can honestly
+ *     compute. Deadhead is a real cost, and the one dispatchers over-weight by
+ *     eye because it is the one they can see.
+ *
+ * Queue time is missing on purpose. It belongs in this ranking — a driver stuck
+ * three hours at a gate is not doing a second turn — but no free public source
+ * for real gate queue times exists, and an earlier version filled the gap with
+ * a fabricated model that then drove routing. Better to rank on two real terms
+ * than three where one is invented.
  *
  * Anything infeasible — gate shut on arrival, driver out of hours — is not
  * scored down, it is marked infeasible and kept, with the reason attached. A
@@ -33,7 +37,6 @@ import { haversine } from './geo.js'
 
 const WEIGHT = {
   urgency: 1.0,
-  gateTime: 0.55,
   deadhead: 0.30,
 }
 
@@ -57,39 +60,33 @@ function milesBetween(a, b) {
  * Score one candidate pull: this truck, going to this terminal, for this box.
  * Returns the score plus the reasoning behind it, never just a number.
  */
-export function scoreMove(truck, container, congestion, day) {
+export function scoreMove(truck, container, dateISO) {
   const terminal = TERMINAL_BY_ID[container.locationId]
   if (!terminal) return null
 
-  const load = congestion?.[terminal.id]
   const deadheadMi = milesBetween(truck.position, terminal.position)
   const driveMin = (deadheadMi / AVG_SPEED_MPH) * 60
-  const gateMin = load?.closed ? null : load?.pickupMin ?? 0
   const urgency = urgencyScore(container.lfdOffsetDays)
 
   const reasons = []
   let feasible = true
 
-  if (load?.closed) {
+  // Published gate state, where the port publishes one at all.
+  const gate = dateISO ? gateStatusFor(terminal.id, dateISO) : { known: false }
+  if (gate.known && !gate.anyOpen) {
     feasible = false
-    reasons.push({
-      kind: 'blocker',
-      text: `Gate closed until ${load.gate.nextOpenLabel ?? 'further notice'}`,
-    })
-  } else if (load && driveMin > load.gate.closesInMin) {
-    feasible = false
-    reasons.push({
-      kind: 'blocker',
-      text: `${Math.round(driveMin)}m drive, gate shuts in ${Math.round(load.gate.closesInMin)}m`,
-    })
+    reasons.push({ kind: 'blocker', text: `Closed today — ${shiftSummary(gate.shifts)}` })
+  } else if (gate.known) {
+    reasons.push({ kind: 'good', text: shiftSummary(gate.shifts) })
+  } else {
+    reasons.push({ kind: 'cost', text: 'Gate status not published' })
   }
 
-  const totalMin = driveMin + (gateMin ?? 0)
-  if (truck.hosRemainingMin != null && truck.hosRemainingMin < totalMin) {
+  if (truck.hosRemainingMin != null && truck.hosRemainingMin < driveMin) {
     feasible = false
     reasons.push({
       kind: 'blocker',
-      text: `Needs ${Math.round(totalMin)}m, driver has ${Math.round(truck.hosRemainingMin)}m`,
+      text: `Drive alone needs ${Math.round(driveMin)}m, driver has ${Math.round(truck.hosRemainingMin)}m`,
     })
   }
 
@@ -101,49 +98,18 @@ export function scoreMove(truck, container, congestion, day) {
     reasons.push({ kind: 'watch', text: `Free time ends in ${container.lfdOffsetDays}d` })
   }
 
-  if (load && !load.closed) {
-    reasons.push({
-      kind: load.level.key === 'clear' || load.level.key === 'moderate' ? 'good' : 'cost',
-      text: `${load.level.label} gate, ${Math.round(load.pickupMin)}m to clear`,
-    })
-  }
-
-  // A box with no chassis under it needs one — either the truck brings its own,
-  // or there is a bare one waiting at that terminal.
   if (!container.chassisId && !truck.chassisId) {
     const spare = CHASSIS.filter(
       (c) => c.status === 'available' && c.locationId === terminal.id
     ).length
-    if (spare === 0) {
-      reasons.push({ kind: 'cost', text: 'No bare chassis at this terminal' })
-    }
+    if (spare === 0) reasons.push({ kind: 'cost', text: 'No bare chassis at this terminal' })
   }
 
-  const score =
-    urgency * WEIGHT.urgency -
-    (gateMin ?? 240) * WEIGHT.gateTime -
-    deadheadMi * WEIGHT.deadhead
+  // Gate time is unknown, so it is excluded from the cost rather than guessed.
+  const economics = moveEconomics({ miles: deadheadMi, driveMin })
+  const score = urgency * WEIGHT.urgency - deadheadMi * WEIGHT.deadhead
 
-  // What the move is worth, so the ranking can be sanity-checked in money
-  // rather than taken on faith from a weighted score.
-  const economics = moveEconomics({
-    miles: deadheadMi,
-    driveMin,
-    gateMin: gateMin ?? 0,
-  })
-
-  return {
-    container,
-    terminal,
-    feasible,
-    score,
-    deadheadMi,
-    driveMin,
-    gateMin,
-    totalMin: gateMin == null ? null : totalMin,
-    economics,
-    reasons,
-  }
+  return { container, terminal, feasible, score, deadheadMi, driveMin, gate, economics, reasons }
 }
 
 /**
@@ -151,13 +117,13 @@ export function scoreMove(truck, container, congestion, day) {
  * their reason — a dispatcher needs to see the option they were considering
  * even when it doesn't work.
  */
-export function candidateMoves(truck, containers, congestion, day, limit = 4) {
+export function candidateMoves(truck, containers, dateISO, limit = 4) {
   const pullable = containers.filter(
     (c) => c.status === 'at_terminal' && !c.truckId && TERMINAL_BY_ID[c.locationId]
   )
 
   return pullable
-    .map((c) => scoreMove(truck, c, congestion, day))
+    .map((c) => scoreMove(truck, c, dateISO))
     .filter(Boolean)
     .sort((a, b) => {
       if (a.feasible !== b.feasible) return a.feasible ? -1 : 1
@@ -167,30 +133,22 @@ export function candidateMoves(truck, containers, congestion, day, limit = 4) {
 }
 
 /**
- * For a truck committed to a terminal it cannot make, the best terminal it can
- * actually complete a transaction at.
+ * The nearest terminal with an open shift published for this date.
  *
- * "Open" is not the bar. A gate that shuts in nine minutes is no use to a
- * driver nine minutes away — they arrive as it closes, having burned the trip
- * twice. The truck has to arrive *and* get through the queue before close, so
- * the filter is drive time plus gate time, and the ranking is by total time
- * rather than distance: a slightly farther terminal running clear beats a near
- * one three hours deep. When nothing qualifies, that is the real answer, and
- * the caller says so rather than offering a move that cannot work.
+ * An earlier version ranked alternatives by drive time plus queue time. Queue
+ * time was invented, so this ranks by distance among terminals the port has
+ * actually said are open, and returns nothing for ports that publish nothing
+ * rather than assuming they are open.
  */
-export function nearestOpenTerminal(fromPosition, congestion, excludeId) {
+export function nearestOpenTerminal(fromPosition, dateISO, excludeId) {
   return CONTAINER_TERMINALS.filter((t) => t.id !== excludeId)
     .map((t) => {
-      const load = congestion?.[t.id]
-      if (!load || load.closed) return null
-      const miles = milesBetween(fromPosition, t.position)
-      const driveMin = (miles / AVG_SPEED_MPH) * 60
-      const totalMin = driveMin + load.pickupMin
-      if (totalMin > load.gate.closesInMin) return null
-      return { terminal: t, miles, driveMin, totalMin, load }
+      const gate = dateISO ? gateStatusFor(t.id, dateISO) : { known: false }
+      if (!gate.known || !gate.anyOpen) return null
+      return { terminal: t, miles: milesBetween(fromPosition, t.position), gate }
     })
     .filter(Boolean)
-    .sort((a, b) => a.totalMin - b.totalMin)[0] ?? null
+    .sort((a, b) => a.miles - b.miles)[0] ?? null
 }
 
 export const nodeName = (id) => NODES[id]?.name ?? id

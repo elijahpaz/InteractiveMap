@@ -7,21 +7,25 @@ import { scorecard, usd } from '../lib/economics.js'
  * Kept deliberately separate from the operational KPI strip: those say what is
  * happening right now, these say whether any of it is working. Each carries a
  * line on why it matters, because a number nobody can interpret gets ignored.
+ *
+ * Turn time shows an em dash rather than a figure. It used to show an average
+ * over a congestion model that was invented end to end. An unknown that admits
+ * it is more useful than a number that cannot be checked.
  */
-export default function Scorecard({ trucks, containers, congestion, onClose }) {
+export default function Scorecard({ trucks, containers, onClose }) {
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   const s = useMemo(
-    () => scorecard({ trucks, containers, congestion }),
-    [trucks, containers, congestion]
+    () => scorecard({ trucks, containers }),
+    [trucks, containers]
   )
 
   const metrics = [
     {
       label: 'Avg turn time',
-      value: `${s.turnTimeMin}m`,
-      note: 'Gate time across open terminals. Every minute is paid and earns nothing.',
-      tone: s.turnTimeMin > 90 ? 'bad' : s.turnTimeMin > 60 ? 'warn' : 'good',
+      value: '—',
+      note: 'No free public measurement exists for San Pedro Bay. Comes back when you measure it from your own drivers\u2019 gate dwell.',
+      tone: 'unknown',
     },
     {
       label: 'Driver utilisation',
@@ -102,9 +106,10 @@ export default function Scorecard({ trucks, containers, congestion, onClose }) {
       ))}
 
       <p className="scorecard__note">
-        Every rate is a placeholder — see <code>ASSUMPTIONS</code> in
-        <code>lib/economics.js</code>. Replace it with your rate sheet and these
-        become real.
+        These are computed from the <em>simulated</em> fleet against placeholder
+        rates in <code>ASSUMPTIONS</code>. They show the shape of the measurement,
+        not your numbers. Gate time is excluded from contribution because it is
+        not measured, which makes contribution an upper bound.
       </p>
     </div>
   )

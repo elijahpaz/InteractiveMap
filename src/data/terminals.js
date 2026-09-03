@@ -21,12 +21,13 @@
  *       Both sets are simplified with Douglas-Peucker for payload size; the
  *       shapes are the real footprints, not boxes drawn around a point.
  *
- *   SIMULATED  everything under `demo`
- *       Invented placeholders. Real gate hours are published per terminal and
- *       change constantly (polb.com/port-info/gate-hours/, data powered by
- *       BlueCargo — a commercial feed with no public API). Real turn times come
- *       from a feed such as the Harbor Trucking Association survey. Never quote
- *       anything under `demo` as fact.
+ *   NOT HERE  gate hours, turn times, congestion
+ *       These used to live under a `demo` key holding invented numbers, which
+ *       rendered identically to the sourced fields above and were therefore
+ *       indistinguishable from fact. They are gone. Published gate status for
+ *       the six POLB terminals lives in polbGateCalendar.js; POLA publishes no
+ *       reachable feed and reports as unknown. Turn time and congestion have no
+ *       free public source at all, so this project does not state them.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -54,7 +55,6 @@ export const CONTAINER_TERMINALS = [
       [33.75291, -118.28387], [33.75216, -118.28732], [33.75362, -118.28933],
       [33.75489, -118.28984], [33.75462, -118.28904],
     ],
-    demo: { turnTimeMin: 62, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: false },
   },
   {
     id: 'T-WBCT-TIL',
@@ -74,7 +74,6 @@ export const CONTAINER_TERMINALS = [
       [33.76219, -118.282], [33.76565, -118.28041], [33.76798, -118.28056],
       [33.76921, -118.28003],
     ],
-    demo: { turnTimeMin: 71, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-TRP',
@@ -93,7 +92,6 @@ export const CONTAINER_TERMINALS = [
       [33.76787, -118.26532], [33.77049, -118.26986], [33.77012, -118.27852],
       [33.76921, -118.28003],
     ],
-    demo: { turnTimeMin: 92, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: false },
   },
   {
     id: 'T-YTI',
@@ -111,7 +109,6 @@ export const CONTAINER_TERMINALS = [
       [33.74897, -118.2653], [33.74932, -118.26555], [33.75063, -118.26433],
       [33.7559, -118.25197], [33.76045, -118.25438],
     ],
-    demo: { turnTimeMin: 71, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-EVP',
@@ -130,7 +127,6 @@ export const CONTAINER_TERMINALS = [
       [33.74183, -118.26585], [33.74539, -118.26711], [33.74906, -118.26568],
       [33.74978, -118.26644], [33.74892, -118.26782], [33.74964, -118.26859],
     ],
-    demo: { turnTimeMin: 58, gateHours: '08:00 - 17:00', appointmentRequired: false, dualTransaction: false },
   },
   {
     id: 'T-FMS',
@@ -151,7 +147,6 @@ export const CONTAINER_TERMINALS = [
       [33.73425, -118.26305], [33.73155, -118.26354], [33.73215, -118.26131],
       [33.73121, -118.26044],
     ],
-    demo: { turnTimeMin: 64, gateHours: '07:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-APM',
@@ -169,7 +164,6 @@ export const CONTAINER_TERMINALS = [
       [33.73324, -118.24027], [33.73372, -118.24173], [33.72892, -118.25822],
       [33.7241, -118.26046], [33.71691, -118.25773], [33.71661, -118.2539],
     ],
-    demo: { turnTimeMin: 78, gateHours: '05:00 - 03:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-SSA-A',
@@ -188,7 +182,6 @@ export const CONTAINER_TERMINALS = [
       [33.76779, -118.24029], [33.78106, -118.24163], [33.78206, -118.22727],
       [33.77056, -118.2261], [33.77028, -118.22698], [33.77007, -118.22691],
     ],
-    demo: { turnTimeMin: 69, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-SSA-C',
@@ -209,7 +202,6 @@ export const CONTAINER_TERMINALS = [
       [33.77094, -118.22067], [33.77261, -118.21796], [33.77279, -118.21806],
       [33.77566, -118.21003], [33.7762, -118.2096], [33.7773, -118.2067],
     ],
-    demo: { turnTimeMin: 54, gateHours: '07:00 - 16:30', appointmentRequired: false, dualTransaction: false },
   },
   {
     id: 'T-LBCT',
@@ -230,7 +222,6 @@ export const CONTAINER_TERMINALS = [
       [33.76712, -118.20781], [33.76301, -118.20713], [33.76258, -118.20726],
       [33.76173, -118.20667], [33.76068, -118.20648],
     ],
-    demo: { turnTimeMin: 44, gateHours: '06:00 - 02:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-ITS',
@@ -257,7 +248,6 @@ export const CONTAINER_TERMINALS = [
       [33.74503, -118.19699], [33.74503, -118.19729], [33.74815, -118.19728],
       [33.74832, -118.19873],
     ],
-    demo: { turnTimeMin: 75, gateHours: '08:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-TTI',
@@ -279,7 +269,6 @@ export const CONTAINER_TERMINALS = [
       [33.74045, -118.2312], [33.74037, -118.23201], [33.74197, -118.24125],
       [33.743, -118.24296], [33.74286, -118.24351], [33.75526, -118.24871],
     ],
-    demo: { turnTimeMin: 83, gateHours: '07:00 - 17:00', appointmentRequired: true, dualTransaction: true },
   },
   {
     id: 'T-PCT',
@@ -304,7 +293,6 @@ export const CONTAINER_TERMINALS = [
       [33.73658, -118.19458], [33.73657, -118.18567], [33.73604, -118.18536],
       [33.73301, -118.18539], [33.73298, -118.1877],
     ],
-    demo: { turnTimeMin: 67, gateHours: '07:00 - 17:00', appointmentRequired: false, dualTransaction: false },
   },]
 
 export const TERMINALS_BY_PORT = {

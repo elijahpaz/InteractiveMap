@@ -3,7 +3,7 @@ import { NODES } from '../data/network.js'
 import { remainingMiles } from '../lib/geo.js'
 import { candidateMoves } from '../lib/dispatch.js'
 import { usd } from '../lib/economics.js'
-import { scheduleLabel } from '../lib/gates.js'
+import { GATE_CAPTURED_AT, gateStatusFor, hasGateData, shiftSummary } from '../lib/gates.js'
 import {
   CHASSIS_STATUS,
   CONTAINER_STATUS,
@@ -48,7 +48,7 @@ function Header({ eyebrow, title, badge, badgeColor, onClose }) {
   )
 }
 
-function TruckDetail({ truck, container, chassis, containers, congestion, day, onSelect, onClose }) {
+function TruckDetail({ truck, container, chassis, containers, dateISO, onSelect, onClose }) {
   const meta = TRUCK_STATUS[truck.status]
   const milesLeft = remainingMiles(truck.route.geometry, truck.progress)
   const minutesLeft = truck.legMinutes * (1 - truck.progress)
@@ -99,8 +99,7 @@ function TruckDetail({ truck, container, chassis, containers, congestion, day, o
       <Recommendations
         truck={truck}
         containers={containers}
-        congestion={congestion}
-        day={day}
+        dateISO={dateISO}
         onSelect={onSelect}
       />
 
@@ -151,10 +150,10 @@ function TruckDetail({ truck, container, chassis, containers, congestion, day, o
  * What this unit should go get next. Ranked, with the reasoning shown — a
  * dispatcher has to be able to disagree with it, which needs the "why".
  */
-function Recommendations({ truck, containers, congestion, day, onSelect }) {
+function Recommendations({ truck, containers, dateISO, onSelect }) {
   const moves = useMemo(
-    () => candidateMoves(truck, containers ?? [], congestion, day, 3),
-    [truck, containers, congestion, day]
+    () => candidateMoves(truck, containers ?? [], dateISO, 3),
+    [truck, containers, dateISO]
   )
   if (moves.length === 0) return null
 
@@ -193,9 +192,10 @@ function Recommendations({ truck, containers, congestion, day, onSelect }) {
         </button>
       ))}
       <p className="recs__note">
-        Ranked by free time remaining, then gate time, then deadhead. Dollar
-        figures are gross contribution on placeholder rates. Blocked options are
-        kept so you can see why.
+        Ranked by free time remaining, then deadhead. Queue time is not in the
+        ranking because it is not measured. Dollar figures are gross contribution
+        on placeholder rates and exclude gate time. Blocked options are kept so
+        you can see why.
       </p>
     </section>
   )
@@ -303,69 +303,52 @@ function ChassisDetail({ chassis, onSelect, onClose }) {
   )
 }
 
-function TerminalDetail({ terminal, inbound, load, day, onClose }) {
+function TerminalDetail({ terminal, inbound, dateISO, onClose }) {
+  const gate = gateStatusFor(terminal.id, dateISO)
   return (
     <>
       <Header
         eyebrow={terminal.port}
         title={terminal.name}
-        badge={`${terminal.turnTimeMin}m turn`}
-        badgeColor={terminal.turnTimeMin > 80 ? '#ef4444' : terminal.turnTimeMin > 60 ? '#f59e0b' : '#22c55e'}
+        badge={gate.known ? (gate.anyOpen ? 'Gate open' : 'Closed today') : 'Gate unknown'}
+        badgeColor={gate.known ? (gate.anyOpen ? '#22c55e' : '#ef4444') : '#94a3b8'}
         onClose={onClose}
       />
 
-      {load?.closed && (
-        <div className="alert alert--accruing" style={{ '--risk': '#64748b' }}>
-          <strong>Gate closed</strong>
-          <span>
-            {load.gate.nextOpenLabel
-              ? `Reopens ${load.gate.nextOpenLabel}`
-              : 'No further gate scheduled'}
-          </span>
+      {gate.known ? (
+        <div className="gateBox">
+          <p className="gateBox__title">Published gate — {dateISO}</p>
+          <ul className="gateBox__shifts">
+            {Object.entries(gate.shifts)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([n, v]) => (
+                <li key={n}>
+                  <span>Shift {n}</span>
+                  <strong className={`shift shift--${v.toLowerCase()}`}>
+                    {v === 'TBD' ? 'Not posted' : v}
+                  </strong>
+                </li>
+              ))}
+          </ul>
+          <p className="gateBox__note">
+            Port of Long Beach, captured {GATE_CAPTURED_AT.slice(0, 10)}. No queue or
+            turn time is published, so none is shown.
+          </p>
         </div>
-      )}
-
-      {load && !load.closed && !load.makesGate && (
-        <div className="alert alert--accruing" style={{ '--risk': '#ef4444' }}>
-          <strong>Misses this gate window</strong>
-          <span>
-            Closes in {formatDuration(load.gate.closesInMin)}; estimated{' '}
-            {formatDuration(load.pickupMin)} to get through.{' '}
-            {load.gate.reopensLabel
-              ? `Next gate ${load.gate.reopensLabel}.`
-              : 'No further gate scheduled.'}
-          </span>
+      ) : (
+        <div className="gateBox gateBox--unknown">
+          <p className="gateBox__title">Gate status unknown</p>
+          <p className="gateBox__note">
+            {hasGateData(terminal.id)
+              ? gate.reason
+              : 'The Port of Los Angeles publishes no gate feed this app can read. Nothing is shown rather than guessed.'}
+          </p>
         </div>
-      )}
-
-      {load && !load.closed && (
-        <>
-          <div className="loadBar" style={{ '--load': load.level.color }}>
-            <span className="loadBar__fill" style={{ width: `${load.index}%` }} />
-          </div>
-          <div className="fields">
-            <Field label="Gate congestion" value={load.level.label} accent={load.level.color} />
-            <Field label="Trucks queued" value={load.queueTrucks} />
-            <Field label="Est. pick up" value={formatDuration(load.pickupMin)} accent={load.pickupMin > 150 ? '#ef4444' : undefined} />
-            <Field label="Est. drop off" value={formatDuration(load.dropoffMin)} />
-          </div>
-        </>
       )}
 
       <div className="fields">
         <Field label="Operator" value={terminal.operator} />
         <Field label="Berths" value={terminal.berth} />
-        <Field label="Gate today" value={scheduleLabel(terminal.id, day)} />
-        <Field
-          label="Appointments"
-          value={terminal.appointmentRequired ? 'Required' : 'Not required'}
-          accent={terminal.appointmentRequired ? '#f59e0b' : '#22c55e'}
-        />
-        <Field
-          label="Dual transaction"
-          value={terminal.dualTransaction ? 'Allowed' : 'Not allowed'}
-          accent={terminal.dualTransaction ? '#22c55e' : '#f59e0b'}
-        />
         <Field label="Trucks inbound" value={inbound} />
       </div>
     </>
@@ -431,8 +414,7 @@ export default function DetailPanel({
   trucks,
   containers,
   chassis,
-  congestion,
-  day,
+  dateISO,
   onSelect,
   onClose,
 }) {
@@ -458,8 +440,7 @@ export default function DetailPanel({
           container={containers.find((c) => c.id === truck.containerId)}
           chassis={chassis.find((c) => c.id === truck.chassisId)}
           containers={containers}
-          congestion={congestion}
-          day={day}
+          dateISO={dateISO}
           onSelect={onSelect}
           onClose={onClose}
         />
@@ -496,13 +477,7 @@ export default function DetailPanel({
     ).length
     return (
       <section className="detail">
-        <TerminalDetail
-          terminal={node}
-          inbound={inbound}
-          load={congestion?.[id]}
-          day={day}
-          onClose={onClose}
-        />
+        <TerminalDetail terminal={node} inbound={inbound} dateISO={dateISO} onClose={onClose} />
       </section>
     )
   }

@@ -12,8 +12,7 @@ import {
 } from 'react-leaflet'
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
 import { HARBOR_BOUNDS, PORTS, TERMINAL_BY_ID } from '../data/terminals.js'
-import { formatDuration } from '../lib/status.js'
-import { scheduleLabel } from '../lib/gates.js'
+import { GATE_CAPTURED_AT, gateStatusFor, shiftSummary } from '../lib/gates.js'
 import { spreadPosition } from '../lib/geo.js'
 import {
   chassisIcon,
@@ -113,8 +112,7 @@ export default function MapView({
   selected,
   onSelect,
   focusTarget,
-  congestion,
-  day,
+  dateISO,
   harborFocusKey,
 }) {
   const [zoom, setZoom] = useState(10)
@@ -180,14 +178,11 @@ export default function MapView({
       {layers.terminals &&
         TERMINALS.map((terminal) => {
           const active = isSelected('terminal', terminal.id)
-          const load = congestion?.[terminal.id]
-          // Congestion colour wins when the layer is on; otherwise the terminal
-          // is tinted by which port it belongs to.
-          const fill = load?.closed
-            ? '#64748b'
-            : layers.congestion && load
-              ? load.level.color
-              : PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
+          // Published gate state, or nothing. Terminals with no feed are drawn
+          // in their port colour and say so — never shaded as if we knew.
+          const gate = gateStatusFor(terminal.id, dateISO)
+          const portColor = PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
+          const fill = gate.known && !gate.anyOpen ? '#64748b' : portColor
 
           return (
             <Polygon
@@ -200,8 +195,8 @@ export default function MapView({
                 fillColor: fill,
                 // A shut gate is drawn back and dashed — it should not read as
                 // somewhere a truck can be sent right now.
-                fillOpacity: showShapes ? (active ? 0.9 : load?.closed ? 0.3 : 0.6) : 0,
-                dashArray: load?.closed ? '4 4' : null,
+                fillOpacity: showShapes ? (active ? 0.9 : gate.known && !gate.anyOpen ? 0.3 : 0.6) : 0,
+                dashArray: gate.known && !gate.anyOpen ? '4 4' : null,
               }}
               eventHandlers={{ click: () => onSelect({ type: 'terminal', id: terminal.id }) }}
             >
@@ -211,59 +206,41 @@ export default function MapView({
                   <h4 className="gatePopup__name">{terminal.name}</h4>
                   <p className="gatePopup__berths">{terminal.berth}</p>
 
-                  {load?.closed ? (
+                  {gate.known ? (
                     <>
-                      <div className="gatePopup__level gatePopup__level--shut">
+                      <div
+                        className={`gatePopup__level ${
+                          gate.anyOpen ? '' : 'gatePopup__level--shut'
+                        }`}
+                        style={{ '--load': gate.anyOpen ? '#22c55e' : '#ef4444' }}
+                      >
                         <span className="gatePopup__dot" />
-                        Gate closed
+                        {gate.anyOpen ? 'Gate open today' : 'No open shift today'}
                       </div>
+                      <ul className="gatePopup__shifts">
+                        {Object.entries(gate.shifts)
+                          .sort(([a], [b]) => Number(a) - Number(b))
+                          .map(([n, v]) => (
+                            <li key={n}>
+                              <span>Shift {n}</span>
+                              <strong className={`shift shift--${v.toLowerCase()}`}>
+                                {v === 'TBD' ? 'Not posted' : v}
+                              </strong>
+                            </li>
+                          ))}
+                      </ul>
                       <p className="gatePopup__note">
-                        {load.gate.nextOpenLabel
-                          ? `Reopens ${load.gate.nextOpenLabel}`
-                          : 'No further gate scheduled'}
-                        {' · '}
-                        {scheduleLabel(terminal.id, day)} today
+                        Published by the Port of Long Beach for {dateISO}, captured{' '}
+                        {GATE_CAPTURED_AT.slice(0, 10)}. No queue or wait time is shown
+                        because none is published.
                       </p>
                     </>
                   ) : (
-                    load && (
-                      <>
-                        <div
-                          className="gatePopup__level"
-                          style={{ '--load': load.level.color }}
-                        >
-                          <span className="gatePopup__dot" />
-                          {load.level.label} · {load.queueTrucks} trucks queued
-                        </div>
-                        <div className="gatePopup__times">
-                          <div>
-                            <span>Pick up</span>
-                            <strong>{formatDuration(load.pickupMin)}</strong>
-                          </div>
-                          <div>
-                            <span>Drop off</span>
-                            <strong>{formatDuration(load.dropoffMin)}</strong>
-                          </div>
-                        </div>
-
-                        {!load.makesGate && (
-                          <p className="gatePopup__warn">
-                            Gate shuts in {formatDuration(load.gate.closesInMin)} —
-                            leaving now misses this window.{' '}
-                            {load.gate.reopensLabel
-                              ? `Next gate ${load.gate.reopensLabel}.`
-                              : 'No further gate scheduled.'}
-                          </p>
-                        )}
-
-                        <p className="gatePopup__note">
-                          {scheduleLabel(terminal.id, day)}
-                          {load.gate.state === 'closing' &&
-                            ` · closes in ${formatDuration(load.gate.closesInMin)}`}
-                          {' · modelled, not a live feed'}
-                        </p>
-                      </>
-                    )
+                    <p className="gatePopup__note gatePopup__note--unknown">
+                      Gate status unknown — {gate.reason}. The Port of Los Angeles
+                      publishes no feed this app can read, so nothing is shown rather
+                      than guessed.
+                    </p>
                   )}
                 </div>
               </Popup>
@@ -285,16 +262,11 @@ export default function MapView({
               <strong>{terminal.name}</strong>
               <br />
               {terminal.berth}
-              {congestion?.[terminal.id] && (
-                <>
-                  <br />
-                  {congestion[terminal.id].closed
-                    ? `Gate closed · reopens ${congestion[terminal.id].gate.nextOpenLabel ?? '—'}`
-                    : `${congestion[terminal.id].level.label} · pick up ${formatDuration(
-                        congestion[terminal.id].pickupMin
-                      )}`}
-                </>
-              )}
+              <br />
+              {(() => {
+                const g = gateStatusFor(terminal.id, dateISO)
+                return g.known ? shiftSummary(g.shifts) : 'Gate status not published'
+              })()}
             </Tooltip>
           </Marker>
         ))}

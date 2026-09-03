@@ -10,8 +10,9 @@ import { CONTAINER_TERMINALS, PORTS } from './terminals.js'
 /**
  * Terminals for the operations views. There is exactly one terminal list in
  * this project — `terminals.js` — and this flattens it into the shape the ops
- * components expect. Operating characteristics come from that file's `demo`
- * block and are simulated; the identity fields are sourced. See its header.
+ * components expect. Every field here is sourced. Gate status is not carried
+ * on the terminal at all; it is looked up per date from the published calendar
+ * in `lib/gates.js`, which knows what it does and does not have.
  */
 export const TERMINALS = CONTAINER_TERMINALS.map((t) => ({
   id: t.id,
@@ -22,11 +23,6 @@ export const TERMINALS = CONTAINER_TERMINALS.map((t) => ({
   position: t.position,
   boundary: t.boundary,
   boundarySource: t.boundarySource,
-  // ── simulated ──
-  turnTimeMin: t.demo.turnTimeMin,
-  gateHours: t.demo.gateHours,
-  appointmentRequired: t.demo.appointmentRequired,
-  dualTransaction: t.demo.dualTransaction,
 }))
 
 export const YARDS = [

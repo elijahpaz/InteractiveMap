@@ -122,17 +122,17 @@ export function detentionExposure(truck) {
  * These are the argument for the whole system, so they are computed from live
  * state rather than stored — there is nowhere to quietly fudge them.
  *
- *   turnTimeMin       average gate time across open terminals
- *   utilisationPct    share of driver time that is productive, not queued or held
+ * Turn time used to be one of them and has been removed: it was averaged from
+ * an invented congestion model. There is no free public measurement of gate
+ * turn time at San Pedro Bay, so the honest count here is four, not five, and
+ * the fifth returns when you can measure it from your own drivers' dwell.
+ *
+ * *   utilisationPct    share of driver time that is productive, not queued or held
  *   deadheadMiles     miles run without a box on the chassis
  *   exposureUsd       accessorial charges currently accruing or one day away
  *   marginPerLoadUsd  average gross contribution across loads in progress
  */
-export function scorecard({ trucks, containers, congestion }) {
-  const open = Object.values(congestion ?? {}).filter((c) => c && !c.closed)
-  const turnTimeMin = open.length
-    ? Math.round(open.reduce((s, c) => s + c.turnMin, 0) / open.length)
-    : 0
+export function scorecard({ trucks, containers }) {
 
   // Productive = rolling, full stop. An earlier version counted dwell as
   // productive as long as it stayed within that stop's norm, which made the
@@ -162,12 +162,12 @@ export function scorecard({ trucks, containers, congestion }) {
     }
 
     if (truck.containerId) {
-      const load = congestion?.[truck.route?.to]
+      // Gate time is not included: it is real cost, but we have no measurement
+      // of it, so contribution here is an upper bound and is labelled as one.
       margins.push(
         moveEconomics({
           miles: (legMin / 60) * 38,
           driveMin: legMin,
-          gateMin: load?.closed ? 0 : load?.pickupMin ?? 0,
           dwellMin: truck.dwellMin ?? 0,
         }).margin
       )
@@ -185,7 +185,6 @@ export function scorecard({ trucks, containers, congestion }) {
     ASSUMPTIONS.chassisPerDayUsd
 
   return {
-    turnTimeMin,
     utilisationPct,
     deadheadMiles: Math.round(deadheadMiles),
     exposureUsd: money(demurrage + nextDay + detention + oosChassis),

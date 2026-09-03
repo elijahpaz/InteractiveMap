@@ -9,10 +9,9 @@ import { CHASSIS, CONTAINERS } from './data/equipment.js'
 import { NODES } from './data/network.js'
 import { useSimulation } from './hooks/useSimulation.js'
 import { isLiveContainer } from './lib/status.js'
-import { congestionSnapshot } from './lib/congestion.js'
 import { exceptionCounts, findExceptions } from './lib/exceptions.js'
 import { CONTAINER_TERMINALS } from './data/terminals.js'
-import { DAY_SHORT } from './data/gateSchedules.js'
+import { GATE_CAPTURED_AT, COVERAGE_END, COVERAGE_START } from './lib/gates.js'
 
 const DEFAULT_LAYERS = {
   fleet: true,
@@ -22,7 +21,6 @@ const DEFAULT_LAYERS = {
   yards: true,
   containers: true,
   chassis: false,
-  congestion: true,
 }
 
 const SPEEDS = [1, 4, 12]
@@ -34,7 +32,7 @@ function formatClock(totalMinutes) {
 }
 
 export default function App() {
-  const { trucks, playing, setPlaying, speed, setSpeed, clockMin, day, reset } = useSimulation()
+  const { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset } = useSimulation()
 
   const [harborFocusKey, setHarborFocusKey] = useState(0)
   const [demoNoticeOpen, setDemoNoticeOpen] = useState(true)
@@ -51,14 +49,14 @@ export default function App() {
     [showCompleted]
   )
 
-  const congestion = useMemo(
-    () => congestionSnapshot(CONTAINER_TERMINALS.map((t) => t.id), Math.floor(clockMin), day),
-    [Math.floor(clockMin), day] // eslint-disable-line react-hooks/exhaustive-deps
-  )
+  // The published gate calendar is dated, so the app works in real dates. It
+  // starts at the first date the capture covers rather than "today", so the
+  // gate data on screen is always data we actually hold.
+  const dateISO = useMemo(() => COVERAGE_START, [])
 
   const exceptions = useMemo(
-    () => findExceptions({ trucks, containers, congestion, day }),
-    [trucks, containers, congestion, day]
+    () => findExceptions({ trucks, containers, dateISO }),
+    [trucks, containers, dateISO]
   )
   const alertCounts = useMemo(() => exceptionCounts(exceptions), [exceptions])
 
@@ -113,7 +111,7 @@ export default function App() {
         </div>
 
         <div className="topbar__clock">
-          <span className="topbar__day">{DAY_SHORT[day]}</span>
+          <span className="topbar__day">{dateISO}</span>
           <span className="topbar__time">{formatClock(clockMin)}</span>
           <span className="topbar__tz">PT</span>
         </div>
@@ -174,10 +172,13 @@ export default function App() {
         <div className="demoNotice">
           <span className="demoNotice__tag">Demo data</span>
           <p>
-            Terminal names, operators, berths and boundaries are real, from the
-            two port authorities. <strong>Everything operational is simulated</strong>{' '}
-            — the fleet, drivers, containers, chassis, client companies, and all
-            congestion, gate hours and time estimates. Nothing here is a live feed.
+            <strong>Real:</strong> the 13 terminals, their operators, berths and
+            boundaries, and Long Beach gate status — captured from the port's own
+            calendar on {GATE_CAPTURED_AT.slice(0, 10)}, covering {COVERAGE_START} to{' '}
+            {COVERAGE_END}. <strong>Simulated:</strong> the fleet, drivers,
+            containers, chassis and clients — placeholders for your own records.{' '}
+            <strong>Not shown at all:</strong> gate congestion and turn times, which
+            have no free public source, so the app says it does not know.
           </p>
           <button
             type="button"
@@ -194,7 +195,7 @@ export default function App() {
         trucks={trucks}
         containers={containers}
         chassis={CHASSIS}
-        congestion={congestion}
+        dateISO={dateISO}
         alertCounts={alertCounts}
       />
 
@@ -218,8 +219,7 @@ export default function App() {
             selected={selected}
             onSelect={select}
             focusTarget={focusTarget}
-            congestion={congestion}
-            day={day}
+            dateISO={dateISO}
             harborFocusKey={harborFocusKey}
           />
 
@@ -227,8 +227,7 @@ export default function App() {
             <Scorecard
               trucks={trucks}
               containers={containers}
-              congestion={congestion}
-              onClose={() => setScorecardOpen(false)}
+                  onClose={() => setScorecardOpen(false)}
             />
           )}
 
@@ -245,8 +244,7 @@ export default function App() {
           trucks={trucks}
           containers={containers}
           chassis={CHASSIS}
-          congestion={congestion}
-          day={day}
+          dateISO={dateISO}
           onSelect={select}
           onClose={() => setSelected(null)}
         />

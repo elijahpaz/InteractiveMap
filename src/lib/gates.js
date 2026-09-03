@@ -1,127 +1,107 @@
-import { DAY_SHORT, GATE_SCHEDULES } from '../data/gateSchedules.js'
+import { POLB_GATE_CALENDAR as calendar } from '../data/polbGateCalendar.js'
 
 /**
- * Is the gate open, when does it shut, and can a truck actually get through
- * before it does?
+ * Gate status, from published data only.
  *
- * That last question is the point of this file. A pick-up estimate of "3h 40m"
- * is worthless on its own — if the gate closes in forty minutes, the honest
- * answer is that the driver is not getting in today. Everything here exists so
- * the map can say that instead of quietly showing a number that cannot happen.
+ * This file replaced a hand-written weekly schedule of invented opening hours.
+ * That schedule was shaped correctly but every hour in it was made up, which
+ * made it worse than useless: it rendered identically to fact.
+ *
+ * What we actually have:
+ *
+ *   Port of Long Beach — a real 14-day forward gate calendar, per terminal,
+ *   per ILWU shift, published at polb.com/port-info/gate-hours/ and captured
+ *   into data/polbGateCalendar.json. Values are exactly as published: Open,
+ *   Closed, or TBD. TBD means the terminal has not committed yet — it is a
+ *   real state, not missing data, and is reported as itself.
+ *
+ *   Port of Los Angeles — nothing. POLA publishes gate hours as a rendered
+ *   document this project could not reach programmatically, and has no open
+ *   feed. Its seven terminals therefore report UNKNOWN. They are not filled in
+ *   by analogy with Long Beach, and not guessed from a "typical" schedule.
+ *
+ * What we deliberately do NOT have, and do not invent:
+ *
+ *   Clock times. The source gives shift-level open/closed, not hours. So this
+ *   module cannot answer "does the gate shut in 20 minutes", and nothing that
+ *   depends on that question survives. An earlier version answered it with
+ *   fabricated windows and drove routing decisions off the result.
  */
 
-const MINUTES_PER_DAY = 1440
+export const GATE_SOURCE = calendar.source
+export const GATE_PUBLISHER = calendar.publisher
+export const GATE_CAPTURED_AT = calendar.capturedAt
 
-/** Warn this far ahead of a gate closing. */
-export const CLOSING_SOON_MIN = 60
+export const SHIFT_STATUS = {
+  Open: { label: 'Open', color: '#22c55e' },
+  Closed: { label: 'Closed', color: '#ef4444' },
+  TBD: { label: 'Not yet posted', color: '#94a3b8' },
+}
 
-/**
- * Windows that apply at a given moment, expressed relative to `clockMin` on
- * the current day. Yesterday's overnight windows can still be running, so we
- * check the previous day shifted back a full day.
- */
-function activeWindows(terminalId, day) {
-  const schedule = GATE_SCHEDULES[terminalId]
-  if (!schedule) return []
+/** The dates the captured calendar actually covers. */
+export const COVERED_DATES = Object.keys(
+  calendar.terminals[Object.keys(calendar.terminals)[0]] ?? {}
+).sort()
 
-  const today = (schedule[day] ?? []).map(([open, close]) => [open, close])
-  const yesterday = (schedule[(day + 6) % 7] ?? [])
-    .filter(([, close]) => close > MINUTES_PER_DAY)
-    .map(([open, close]) => [open - MINUTES_PER_DAY, close - MINUTES_PER_DAY])
+export const COVERAGE_START = COVERED_DATES[0]
+export const COVERAGE_END = COVERED_DATES[COVERED_DATES.length - 1]
 
-  return [...yesterday, ...today].sort((a, b) => a[0] - b[0])
+/** Is this terminal covered by a published feed at all? */
+export function hasGateData(terminalId) {
+  return Boolean(calendar.terminals[terminalId])
+}
+
+export function toISODate(date) {
+  return date.toISOString().slice(0, 10)
 }
 
 /**
- * Gate state for one terminal at a moment in the week.
+ * Published gate status for one terminal on one date.
  *
- *   state         'open' | 'closing' | 'closed'
- *   closesInMin   minutes until the current window ends (open/closing only)
- *   opensInMin    minutes until the next window starts (closed only)
- *   nextOpenLabel human-readable next opening, e.g. "Mon 08:00"
+ * Returns `{ known: false, reason }` rather than a plausible default whenever
+ * the terminal is not covered, or the date falls outside what was captured.
+ * Callers must render the unknown case as unknown.
  */
-/** The first gate window that starts strictly after `afterMin`, up to a week out. */
-function nextWindowAfter(terminalId, afterMin, day) {
-  let searchDay = day
-  let offset = 0
-  for (let i = 0; i < 8; i++) {
-    const candidates = activeWindows(terminalId, searchDay)
-      .filter(([open]) => open + offset > afterMin)
-      .sort((a, b) => a[0] - b[0])
-
-    if (candidates.length) {
-      const [open] = candidates[0]
-      return {
-        inMin: Math.round(open + offset - afterMin),
-        label: `${DAY_SHORT[searchDay]} ${formatMinutes(open % MINUTES_PER_DAY)}`,
-        sameDay: i === 0,
-      }
-    }
-    searchDay = (searchDay + 1) % 7
-    offset += MINUTES_PER_DAY
-  }
-  return null
-}
-
-export function gateStatus(terminalId, clockMin, day) {
-  const windows = activeWindows(terminalId, day)
-  const current = windows.find(([open, close]) => clockMin >= open && clockMin < close)
-
-  if (current) {
-    const closesInMin = Math.round(current[1] - clockMin)
-    // A truck that misses this window isn't necessarily done for the day — a
-    // midday break reopens in an hour. Carry the next opening either way so
-    // callers can say which it is.
-    const reopen = nextWindowAfter(terminalId, current[1], day)
+export function gateStatusFor(terminalId, dateISO) {
+  const perTerminal = calendar.terminals[terminalId]
+  if (!perTerminal) {
     return {
-      state: closesInMin <= CLOSING_SOON_MIN ? 'closing' : 'open',
-      open: true,
-      closesInMin,
-      closesAt: current[1] % MINUTES_PER_DAY,
-      opensInMin: null,
-      nextOpenLabel: null,
-      reopensLabel: reopen?.label ?? null,
-      reopensSameDay: reopen?.sameDay ?? false,
+      known: false,
+      reason: 'No published gate feed for this port',
+      shifts: null,
     }
   }
 
-  const next = nextWindowAfter(terminalId, clockMin, day)
+  const shifts = perTerminal[dateISO]
+  if (!shifts) {
+    return {
+      known: false,
+      reason: `Outside the captured window (${COVERAGE_START} to ${COVERAGE_END})`,
+      shifts: null,
+    }
+  }
+
+  const values = Object.values(shifts)
   return {
-    state: 'closed',
-    open: false,
-    closesInMin: null,
-    closesAt: null,
-    opensInMin: next?.inMin ?? null,
-    nextOpenLabel: next?.label ?? null,
-    reopensLabel: next?.label ?? null,
-    reopensSameDay: next?.sameDay ?? false,
+    known: true,
+    shifts,
+    anyOpen: values.includes('Open'),
+    allClosed: values.every((v) => v === 'Closed'),
+    unposted: values.every((v) => v === 'TBD'),
   }
 }
 
-/**
- * Whether a truck arriving in `etaMin` can still be processed. A driver who
- * reaches the gate after it shuts has burned the trip, so this is what the map
- * warns on rather than the raw estimate.
- */
-export function willMakeGate(status, etaMin) {
-  if (!status.open) return false
-  return etaMin <= status.closesInMin
+/** "Shift 1 open · Shift 2 closed · Shift 3 not yet posted" */
+export function shiftSummary(shifts) {
+  if (!shifts) return 'Not published'
+  return Object.entries(shifts)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([n, v]) => `Shift ${n} ${(SHIFT_STATUS[v]?.label ?? v).toLowerCase()}`)
+    .join(' · ')
 }
 
-/** Today's windows as text, e.g. "08:00-12:00, 13:00-17:00" or "Closed". */
-export function scheduleLabel(terminalId, day) {
-  // A missing day must not quietly render as "Closed" — that reads as a real
-  // closure and is indistinguishable from one.
-  if (day == null) return '—'
-  const windows = GATE_SCHEDULES[terminalId]?.[day] ?? []
-  if (windows.length === 0) return 'Closed'
-  return windows
-    .map(([open, close]) => `${formatMinutes(open)}-${formatMinutes(close % MINUTES_PER_DAY)}`)
-    .join(', ')
-}
-
-export function formatMinutes(mins) {
-  const h = Math.floor(mins / 60) % 24
-  const m = Math.floor(mins % 60)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+/** How stale the captured calendar is, in days, relative to `now`. */
+export function calendarAgeDays(now = new Date()) {
+  const captured = new Date(GATE_CAPTURED_AT)
+  return Math.floor((now - captured) / 86400000)
 }

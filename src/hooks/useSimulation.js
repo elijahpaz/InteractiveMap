@@ -3,7 +3,6 @@ import { TRUCKS } from '../data/fleet.js'
 import { NODES } from '../data/network.js'
 import { bearingAtProgress, pathLength, pointAtProgress } from '../lib/geo.js'
 import { TRUCK_STATUS } from '../lib/status.js'
-import { congestionFor } from '../lib/congestion.js'
 
 // Stands in for a live telematics feed. Trucks roll along their tour geometry
 // on a clock, dwell at each stop for as long as that stop usually takes, then
@@ -15,6 +14,8 @@ const AVG_SPEED_MPH = 38
 const SIM_MINUTES_PER_REAL_SECOND = 2
 const TICK_MS = 250
 const YARD_DWELL_MIN = 40
+/** Placeholder only — see dwellTargetMin. Not a measured turn time. */
+const TERMINAL_DWELL_MIN = 75
 
 /** Nominal minutes to drive a leg end to end, from its length. */
 function legMinutes(geometry) {
@@ -23,22 +24,19 @@ function legMinutes(geometry) {
 }
 
 /**
- * How long a unit sits at a stop before it can leave.
+ * How long a simulated unit sits at a stop.
  *
- * Terminals dwell for as long as the gate is *currently* taking, not their
- * baseline turn time. Without this, congestion was decoration: the map could
- * show a three-hour queue while trucks still departed on the terminal's best-
- * case number, so nothing downstream — utilisation, contribution, the gate
- * warnings — reflected it. Clients use their own detention norm.
+ * This is a property of the SIMULATED FLEET, not a claim about any real
+ * terminal. A previous version drove it from a congestion model whose numbers
+ * were invented; that model is gone, and no replacement exists because there is
+ * no free public source for real gate queue times. Terminal dwell is now a flat
+ * placeholder, and the app no longer reports turn time as if it knew it.
  */
-function dwellTargetMin(nodeId, clockMin = 0) {
+function dwellTargetMin(nodeId) {
   const node = NODES[nodeId]
   if (!node) return YARD_DWELL_MIN
-  if (node.turnTimeMin != null) {
-    return congestionFor(nodeId, clockMin)?.turnMin ?? node.turnTimeMin
-  }
   if (node.avgDetentionMin != null) return node.avgDetentionMin
-  return YARD_DWELL_MIN
+  return TERMINAL_DWELL_MIN
 }
 
 function initialState() {
@@ -55,7 +53,6 @@ export function useSimulation() {
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(1)
   const [clockMin, setClockMin] = useState(8 * 60 + 20) // 08:20 local
-  const [day, setDay] = useState(2) // Tuesday — a normal working day
   const [motion, setMotion] = useState(initialState)
   const lastTickRef = useRef(null)
   // The tick runs inside a closure, so the clock is mirrored in a ref to keep
@@ -74,7 +71,6 @@ export function useSimulation() {
   const reset = useCallback(() => {
     setMotion(initialState())
     setClockMin(8 * 60 + 20)
-    setDay(2)
     clockRef.current = 8 * 60 + 20
     lastTickRef.current = null
   }, [])
@@ -96,10 +92,7 @@ export function useSimulation() {
       if (simMinutes <= 0) return
 
       setClockMin((c) => {
-        const next = c + simMinutes
-        // Roll the weekday over at midnight so gate schedules actually cycle.
-        if (next >= 24 * 60) setDay((d) => (d + 1) % 7)
-        clockRef.current = next % (24 * 60)
+        clockRef.current = (c + simMinutes) % (24 * 60)
         return clockRef.current
       })
       setMotion((current) =>
@@ -121,7 +114,7 @@ export function useSimulation() {
           // Parked: accrue dwell, and depart once the stop's normal time is up.
           const dwellMin = m.dwellMin + simMinutes
           const stopId = legs[m.leg].to
-          if (dwellMin < dwellTargetMin(stopId, clockRef.current)) return { ...m, dwellMin }
+          if (dwellMin < dwellTargetMin(stopId)) return { ...m, dwellMin }
 
           const nextLeg = (m.leg + 1) % legs.length
           return {
@@ -160,7 +153,7 @@ export function useSimulation() {
           status: m.status,
           progress: m.progress,
           dwellMin: m.dwellMin,
-          dwellTargetMin: dwellTargetMin(route.to, clockMin),
+          dwellTargetMin: dwellTargetMin(route.to),
           position,
           heading: bearingAtProgress(route.geometry, m.progress),
           legMinutes: legMinutesByTruck[truck.id]?.[m.leg] ?? 60,
@@ -169,5 +162,5 @@ export function useSimulation() {
     [motion, legMinutesByTruck, clockMin]
   )
 
-  return { trucks, playing, setPlaying, speed, setSpeed, clockMin, day, reset }
+  return { trucks, playing, setPlaying, speed, setSpeed, clockMin, reset }
 }

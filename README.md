@@ -4,8 +4,8 @@ An interactive dispatch map for port drayage around San Pedro Bay (Port of Los
 Angeles / Port of Long Beach). One map, one canvas:
 
 - **Fleet** — where every truck is, what it's doing, and the leg it's running
-- **Terminals** — all 13 container terminals as their real footprints, shaded
-  by gate congestion, with pick-up / drop-off estimates in a click
+- **Terminals** — all 13 container terminals as their real footprints, with
+  published Long Beach gate status per shift, and an explicit unknown for LA
 - **Clients** — delivery locations, receiving hours and detention history
 - **Yards** — the home yard and overflow depot, with slot utilisation
 - **Containers** — every box that isn't completed, coloured by demurrage risk
@@ -33,41 +33,59 @@ Both are simplified with Douglas-Peucker for payload size. OSM still files three
 POLA terminals under legacy tenant names — *China Shipping* and *Yang Ming* for
 the two WBCT terminals, *Evergreen* for Everport.
 
-## The five numbers
+## What this app knows, and what it refuses to say
 
-You can't argue for a tool like this on features. The **Scorecard** panel tracks
-the five measures the business case actually rests on, computed from live state
-rather than stored, so there's nowhere to quietly fudge them:
+The hard rule: **published data, your own data, or an explicit unknown. Never a
+plausible-looking number.**
 
-| Metric | Why it's here |
+An earlier version of this project violated that. It carried a congestion model
+that produced things like *"Severe · 51 trucks queued · pick up 3h 40m"* for a
+real, named terminal. Every one of those figures came out of a sine wave and a
+hash of the terminal's own ID string. It was labelled as simulated, but it
+rendered in exactly the same type as the sourced fields beside it, and it drove
+routing recommendations. That code is deleted, not relabelled.
+
+### Real, and sourced
+
+| Data | Source |
 | --- | --- |
-| Avg turn time | Gate time across open terminals. Every minute is paid and earns nothing. |
-| Driver utilisation | Share of on-duty time rolling rather than queued or held. |
-| Deadhead miles | Miles with nothing on the chassis. Pure cost, no revenue. |
-| Accessorials at risk | Demurrage, detention and idle equipment accruing or one day away. |
-| Contribution / load | Average across loads in progress, before fixed fleet costs. |
+| 13 container terminals — names, operators, piers, berths | POLA and POLB |
+| All 13 terminal boundaries | POLB `Piers` ArcGIS FeatureServer; OpenStreetMap (ODbL) |
+| Long Beach gate status — 6 terminals × 14 days × 3 shifts | [POLB gate hours](https://polb.com/port-info/gate-hours/) |
 
-They move together the way they should. Across one simulated day:
+Gate status is captured verbatim: `Open`, `Closed`, or `TBD`. **`TBD` is a real
+published state** — the terminal hasn't committed to that shift yet — and is shown
+as "not posted", never folded into open or closed. The capture is a snapshot with
+a date on it, and the app refuses to answer for dates outside the window it holds
+rather than extrapolating.
 
-| Time | Turn time | Utilisation | Contribution/load |
-| --- | --- | --- | --- |
-| 08:42 | 106m | 89% | $336 |
-| 11:30 | 95m | 60% | $332 |
-| 14:17 | 104m | **67%** | **$263** |
-| 17:06 | 76m | 86% | **$364** |
-| 19:54 | 67m | 73% | $360 |
+### Explicitly unknown
 
-Congestion lengthens dwell, dwell drops utilisation, and contribution per load
-falls with it — $101 of a $267 load contribution disappears into a three-hour
-gate queue. That chain is the argument, and it is why gate time is weighted so
-heavily in dispatch scoring.
+- **The seven Port of LA terminals have no gate status.** POLA publishes nothing
+  this project can read. They say "Gate status unknown" and are never filled in
+  by analogy with Long Beach.
+- **Gate congestion, queue lengths, wait and turn times do not appear anywhere.**
+  There is no free public measurement for San Pedro Bay. The Scorecard shows an
+  em dash for turn time rather than a figure.
+- **Clock times.** POLB publishes shift-level open/closed, not hours. So the app
+  cannot say "the gate shuts in 20 minutes", and every feature that depended on
+  that — arrival-versus-close countdowns, queue-aware routing — was removed
+  rather than rebuilt on guesses.
 
-**Every rate is a placeholder.** They're plausible for LA/Long Beach and they're
-not yours — rates are negotiated per customer and lane, driver pay differs by
-company vs owner-operator, accessorial schedules vary by terminal and line. They
-sit in one `ASSUMPTIONS` object at the top of `lib/economics.js` for exactly that
-reason. `margin` is gross contribution, not profit: tractor payments, insurance
-and yard rent sit below it.
+### Simulated, and labelled
+
+The fleet, drivers, containers, chassis, clients and yards are placeholders for
+records **you** own and would replace from your TMS. That is a different thing
+from inventing facts about the outside world: a placeholder for your data is
+honest scaffolding; a fabricated queue length at a real terminal is a false
+claim someone could act on.
+
+### How to measure what's missing
+
+For turn time and congestion, the best sensor a drayage company has is its own
+trucks. Geofence each terminal, measure gate-in to gate-out from your ELD, and
+you get ground truth for exactly the terminals you use — better than any
+purchased feed and already yours.
 
 ## Recommendations
 
@@ -139,65 +157,6 @@ schedule; neither is interesting alone:
 
 Every rule reads state the app already holds — no rule needs data we don't have.
 
-## Gate hours
-
-Gate hours are a **weekly schedule**, not a string. `src/data/gateSchedules.js`
-holds per-terminal windows indexed by weekday, and the structure is the part
-that's real:
-
-- several windows per day, so a midday break is expressible
-- a window may run past midnight (`close > 1440`) for a night gate
-- a day with no windows is closed
-
-The hours themselves are placeholders — POLB republishes real ones continuously
-at [polb.com/port-info/gate-hours/](https://polb.com/port-info/gate-hours/) — but
-a real feed drops straight into this shape. What the schedule buys you:
-
-- Terminals go **dashed and grey when the gate is shut**, with the next opening.
-  At Tuesday 12:31 lunch, 10 of 13 gates close and the KPI reads 3/13 — only
-  Everport (no break), APM (05:00-03:00) and LBCT (night gate) stay open.
-- The estimate is **checked against the close**. If a truck leaving now can't get
-  through before the gate shuts, the popup says so and names the next window —
-  and it distinguishes *missing a window* from *missing the day*: Tue 08:54 at
-  Pier T reopens Tue 13:00, but Fri 16:50 reopens **Mon 07:00**, skipping the
-  weekend.
-
-That check is the reason the schedule matters. "Est. pick up 3h 40m" is worthless
-on its own if the gate shuts in twenty minutes, and a single `'07:00 - 17:00'`
-string cannot express a lunch closure, a Saturday gate, or a night gate — so any
-estimate built on one is wrong the moment a terminal does anything else.
-
-## Gate congestion
-
-Terminals shade green → yellow → orange → red by gate congestion, and clicking
-one opens a popup with **estimated pick-up and drop-off time** and the current
-queue. The same figures appear in the detail panel, and the KPI strip counts how
-many gates are backed up.
-
-**This is a model, not a live feed — and that matters.** There is no free public
-API for real-time congestion at San Pedro Bay. POLB publishes gate hours "powered
-by BlueCargo" and POLA runs Port Optimizer; both are commercial products behind
-authentication with no open endpoint, and real turn times are surveyed by the
-Harbor Trucking Association, also not public.
-
-So `src/lib/congestion.js` models the *shape* real congestion takes — a morning
-peak after the gates open, an afternoon peak before they close, a quiet night,
-and a per-terminal baseline reflecting how that terminal normally performs. It's
-steady and repeatable rather than random, so the map behaves the way a dispatcher
-would expect. The numbers are still invented, and every surface that shows them
-says so.
-
-To make it real, replace `congestionFor` with a lookup against live data. Every
-consumer reads the same object, so nothing else changes:
-
-```js
-{ index, level, queueTrucks, waitMin, turnMin, pickupMin, dropoffMin }
-```
-
-Candidate feeds: BlueCargo, Port Optimizer Control Tower, terminal appointment
-systems (eModal / Voyage Control) — or your own drivers' dwell times, which you
-already have.
-
 ## Running it
 
 ```bash
@@ -219,7 +178,7 @@ src/
   data/
     terminals.js   the 13 container terminals — real geometry, provenance noted
     network.js     re-exports terminals; adds yards and clients (invented)
-    gateSchedules.js  weekly gate windows per terminal
+    polbGateCalendar.js  captured POLB gate calendar, verbatim
     corridors.js   hand-traced freeway polylines through the LA basin
     fleet.js       truck roster; each unit declares its yard/terminal/client
     equipment.js   containers and chassis
@@ -228,7 +187,7 @@ src/
     dispatch.js    scoring for what to do next, and where to send a truck instead
     economics.js   cost, revenue and the five numbers — all rates in one place
     exceptions.js  the rules that decide what's worth flagging
-    gates.js       gate open/closed state, and whether a truck makes the window
+    gates.js       published gate status, and an honest unknown where there is none
     routing.js     composes corridors into legs and three-leg tours
     geo.js         distance, interpolation along a route, marker fan-out
     status.js      every status label and colour, in one place
@@ -262,8 +221,6 @@ The seams are deliberate:
 | Route geometry | `lib/routing.js` → `buildRoute` | Return provider geometry instead of composed corridors |
 | Nodes and roster | `src/data/*.js` | Fetch from the TMS rather than importing constants |
 | Demurrage clocks | `lib/status.js` → `demurrageRisk` | Feed real last-free-day dates in place of `lfdOffsetDays` |
-| Gate congestion | `lib/congestion.js` → `congestionFor` | Return live figures in the same shape |
-| Gate hours | `data/gateSchedules.js` | Replace the windows; the structure already fits |
 | Dispatch weights | `lib/dispatch.js` → `WEIGHT` | Retune against your real cost per hour and per mile |
 | Rates and costs | `lib/economics.js` → `ASSUMPTIONS` | Drop in your rate sheet; everything downstream follows |
 
@@ -282,9 +239,7 @@ worse than obviously fake data — which is why the app carries a dismissible
 | All 13 terminal footprints (POLB GIS + OSM) | Every container number, BOL, weight |
 | Freeway corridors and warehouse cities | Every chassis ID and inspection date |
 | Drayage terminology and mechanics | All 8 client companies and both yards |
-| | Gate hours, turn times, appointment flags |
-| | **All congestion figures and time estimates** |
-| | **All gate hours** (the schedule *structure* is real) |
+| | |
 | | **All rates, costs and dollar figures** |
 
 Anything under a `demo` key, and everything in `YARDS` / `CLIENTS`, is a

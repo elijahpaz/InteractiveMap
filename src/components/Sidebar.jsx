@@ -213,7 +213,7 @@ export default function Sidebar({ trucks, containers, chassis, exceptions, selec
                 accent="#f97316"
                 title={t.name}
                 subtitle={t.berth}
-                meta={`${t.turnTimeMin}m turn`}
+                meta={t.pier}
               />
             ))}
 

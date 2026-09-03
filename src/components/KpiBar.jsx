@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { TERMINALS } from '../data/network.js'
-import { TRUCK_STATUS, demurrageRisk, formatDuration } from '../lib/status.js'
+import { TRUCK_STATUS, demurrageRisk } from '../lib/status.js'
+import { gateStatusFor, hasGateData } from '../lib/gates.js'
 
 /** Detention generally starts biting around the two-hour mark. */
 const DETENTION_THRESHOLD_MIN = 120
@@ -16,7 +17,7 @@ function Kpi({ label, value, sub, tone = 'neutral', subTone, onClick }) {
   )
 }
 
-export default function KpiBar({ trucks, containers, chassis, congestion, alertCounts }) {
+export default function KpiBar({ trucks, containers, chassis, dateISO, alertCounts }) {
   const stats = useMemo(() => {
     const active = trucks.filter((t) => TRUCK_STATUS[t.status]?.group === 'active').length
     const idle = trucks.filter((t) => t.status === 'idle').length
@@ -33,20 +34,15 @@ export default function KpiBar({ trucks, containers, chassis, congestion, alertC
       (t) => t.status === 'at_client' && t.dwellMin > DETENTION_THRESHOLD_MIN
     ).length
 
-    const avgTurn = Math.round(
-      TERMINALS.reduce((sum, t) => sum + t.turnTimeMin, 0) / TERMINALS.length
-    )
-
-    const loads = Object.values(congestion ?? {}).filter(Boolean)
-    const open = loads.filter((l) => !l.closed)
-    const congested = open.filter(
-      (l) => l.level.key === 'heavy' || l.level.key === 'severe'
+    // Only terminals whose port actually publishes a calendar are counted.
+    const published = TERMINALS.filter((t) => hasGateData(t.id))
+    const openToday = published.filter(
+      (t) => gateStatusFor(t.id, dateISO).anyOpen
     ).length
-    const unreachable = open.filter((l) => !l.makesGate).length
-    const worstWait = open.length ? Math.max(...open.map((l) => l.pickupMin)) : 0
+    const unpublished = TERMINALS.length - published.length
 
-    return { active, idle, atRisk, availableChassis, oosChassis, detained, avgTurn, congested, worstWait, openGates: open.length, unreachable }
-  }, [trucks, containers, chassis, congestion])
+    return { active, idle, atRisk, availableChassis, oosChassis, detained, openToday, published: published.length, unpublished }
+  }, [trucks, containers, chassis, dateISO])
 
   return (
     <div className="kpis">
@@ -75,21 +71,10 @@ export default function KpiBar({ trucks, containers, chassis, congestion, alertC
         tone={stats.availableChassis < 3 ? 'warn' : 'good'}
       />
       <Kpi
-        label="Gates open"
-        value={`${stats.openGates}/${TERMINALS.length}`}
-        sub={
-          stats.openGates === 0
-            ? 'all closed'
-            : `${stats.congested} backed up · worst ${formatDuration(stats.worstWait)}`
-        }
-        tone={
-          stats.openGates === 0
-            ? 'neutral'
-            : stats.openGates < TERMINALS.length / 2
-              ? 'warn'
-              : 'good'
-        }
-        subTone={stats.congested > 6 ? 'danger' : stats.congested > 3 ? 'warn' : undefined}
+        label="Gates open (LB)"
+        value={`${stats.openToday}/${stats.published}`}
+        sub={`${stats.unpublished} LA terminals publish nothing`}
+        tone={stats.openToday === 0 ? 'warn' : stats.openToday < stats.published / 2 ? 'warn' : 'good'}
       />
       <Kpi label="Live boxes" value={containers.length} sub="not yet completed" tone="neutral" />
     </div>

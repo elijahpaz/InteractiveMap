@@ -235,8 +235,9 @@ export default function MapView({
                     {access.basis === 'none'
                       ? access.detail
                       : `${access.source}, ${access.asOf}.`}
-                    {access.basis === 'shifts' &&
-                      ' Shifts worked is capacity offered, not queue length — Long Beach publishes no queue or turn time.'}
+                    {access.basis === 'turnTime' &&
+                      ' Measured by the port, not estimated.'}
+                    {access.basis === 'shifts' && ' From the published gate calendar.'}
                     {access.basis === 'appointments' &&
                       ` Complex-wide ${access.allTerminals}%. Los Angeles publishes no gate hours.`}
                   </p>

@@ -184,26 +184,52 @@ Struggling / No gate today / Not published** — and there is one legend and no
 toggle for it. Click a terminal and it tells you which measure produced the
 colour, because the two ports publish different things:
 
-- **Long Beach** → shifts worked today. Two shifts is more capacity than one.
-  That is capacity offered, **not** queue length, and the popup says so.
+- **Long Beach** → **measured gate turn time**, from CargoNav. "59m day · 68m
+  night inside the gate." Measured by the port, not inferred.
 - **Los Angeles** → share of booked appointments actually fulfilled. A terminal
   at 17% could not take four of every five trucks booked for it.
 
-Neither measure is filled in for the other port, and neither is called
-"congestion" — they are labelled as what they are.
+Neither measure is filled in for the other port. A gate with no open shift is
+shut regardless of how fast it turns trucks when open, so the calendar is checked
+first.
+
+## CargoNav
+
+CargoNav is the Port of Long Beach's own operational data hub. Its Operations
+Dashboard is a front end over `core-api.port-scih.com`, and those chart endpoints
+are **open — no key, no auth, plain server-side fetch**:
+
+| Endpoint | What it gives |
+| --- | --- |
+| `/v1/charts/average-terminal-gate-turn-time` | **Measured minutes inside the gate, per terminal, day and night** |
+| `/v2/charts/terminal-flow-truck-activity` | **Daily truck transactions** — loaded/empty, in/out |
+| `/v2/charts/dwell-by-day` | Import dwell bucketed by age |
+| `/v1/charts/vessels-at-berth` | Vessels currently berthed |
+| `/v1/charts/projected-weekly-teu-volume` | TEU projected weeks ahead |
+
+`scripts/fetch_cargonav.mjs` pulls these. Current figures: turn times from 22m
+(Pier C) to 68m (LBCT night), and **~7,830 truck transactions per weekday** across
+the complex — with the weekend collapse to 894 visible in the data, which is a
+useful check that the feed is live.
+
+This corrects two things this project previously asserted. Gate turn time *is*
+published free. Truck counts *are* published. Both were one layer below the page
+being read.
 
 ## How fresh is it, really
 
 | Source | Refresh | Why |
 | --- | --- | --- |
-| **LA appointment fulfilment** | **Automatic, weekday** | Published as a plain PDF that can be fetched directly |
-| **LB gate calendar** | **Manual** | See below |
+| **LB turn time, truck flow, dwell** | **Automatic, weekday** | CargoNav's API is open and server-fetchable |
+| **LA appointment fulfilment** | **Automatic, weekday** | Published as a plain PDF |
+| **LB gate calendar** (open/closed only) | **Manual** | See below |
 
 `.github/workflows/refresh-port-data.yml` pulls the LA figures each weekday and
 commits any change, which triggers the normal Pages deploy. No server needed.
 
-**Long Beach cannot be automated, and this project does not try to force it.**
-Three routes exist and two are closed:
+**Only the Long Beach gate calendar is manual**, and only because it comes from
+a different system than the CargoNav figures. Three routes exist and two are
+closed:
 
 1. `api.bluecargo.io/core/api/gate_schedules/` — the endpoint POLB's own page
    calls. Returns **401** without a commercial BlueCargo key.
@@ -218,9 +244,8 @@ So the Long Beach calendar is a dated snapshot. The app shows its capture date
 and how many days old it is, and **refuses to answer for dates outside the
 window it holds** rather than extrapolating.
 
-To make Long Beach genuinely live, get a BlueCargo key or ask the Port of Long
-Beach for feed access, then replace `src/data/polbGateCalendar.js` from that
-source — everything downstream reads the same shape.
+The calendar only supplies open/closed. The congestion figures come from
+CargoNav and are live, so a stale calendar costs much less than it used to.
 
 ```bash
 python3 scripts/fetch_pola_gate_success.py   # LA, works today

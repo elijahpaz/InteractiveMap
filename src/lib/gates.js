@@ -1,5 +1,6 @@
 import { POLB_GATE_CALENDAR as calendar } from '../data/polbGateCalendar.js'
 import { POLA_GATE_SUCCESS as polaSuccess } from '../data/polaGateSuccess.js'
+import { CARGONAV } from '../data/cargonav.js'
 
 /**
  * Gate status, from published data only.
@@ -179,19 +180,36 @@ export const ACCESS_LEVELS = {
 }
 
 export function terminalAccess(terminalId, dateISO) {
-  // Long Beach: how many shifts the terminal is working today.
   const gate = gateStatusFor(terminalId, dateISO)
-  if (gate.known) {
-    const open = Object.values(gate.shifts).filter((v) => v === 'Open').length
-    const level = open >= 2 ? 'good' : open === 1 ? 'fair' : gate.unposted ? 'unknown' : 'shut'
+
+  // A gate with no open shift is shut regardless of how fast it turns trucks
+  // when it is open, so the calendar is checked first.
+  if (gate.known && !gate.anyOpen) {
     return {
-      ...ACCESS_LEVELS[level],
-      level,
+      ...ACCESS_LEVELS[gate.unposted ? 'unknown' : 'shut'],
+      level: gate.unposted ? 'unknown' : 'shut',
       basis: 'shifts',
-      detail: `${open} of ${Object.keys(gate.shifts).length} shifts open`,
+      detail: gate.unposted ? 'Shifts not yet posted' : 'No shift open today',
       shifts: gate.shifts,
       source: 'Port of Long Beach gate calendar',
       asOf: dateISO,
+    }
+  }
+
+  // Long Beach: the port measures and publishes actual gate turn time.
+  const turn = CARGONAV.turnTime.byTerminal[terminalId]
+  if (turn) {
+    const worst = Math.max(turn.dayMinutes, turn.nightMinutes)
+    const level = worst <= 30 ? 'good' : worst <= 50 ? 'fair' : 'poor'
+    return {
+      ...ACCESS_LEVELS[level],
+      level,
+      basis: 'turnTime',
+      detail: `${turn.dayMinutes}m day · ${turn.nightMinutes}m night inside the gate`,
+      turn,
+      shifts: gate.known ? gate.shifts : null,
+      source: 'Port of Long Beach, CargoNav measured gate turn time',
+      asOf: CARGONAV.turnTime.asOf.slice(0, 10),
     }
   }
 

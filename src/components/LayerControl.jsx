@@ -64,15 +64,31 @@ export default function LayerControl({ layers, onToggle, showCompleted, onToggle
           ))}
         </ul>
 
-        <p className="legend__title">Terminals</p>
+        <p className="legend__title">LA — appointments fulfilled</p>
         <ul>
           <li>
-            <span className="legend__dot" style={{ background: '#4f8fd6' }} />
-            Port of Los Angeles
+            <span className="legend__dot" style={{ background: '#22c55e' }} />
+            95%+ keeping up
           </li>
           <li>
+            <span className="legend__dot" style={{ background: '#eab308' }} />
+            75-94% mostly keeping up
+          </li>
+          <li>
+            <span className="legend__dot" style={{ background: '#f97316' }} />
+            50-74% falling behind
+          </li>
+          <li>
+            <span className="legend__dot" style={{ background: '#ef4444' }} />
+            Under 50% badly behind
+          </li>
+        </ul>
+
+        <p className="legend__title">Long Beach — gate</p>
+        <ul>
+          <li>
             <span className="legend__dot" style={{ background: '#3fa89a' }} />
-            Port of Long Beach
+            Open shift published
           </li>
           <li>
             <span className="legend__dot" style={{ background: '#64748b' }} />

@@ -1,4 +1,5 @@
 import { POLB_GATE_CALENDAR as calendar } from '../data/polbGateCalendar.js'
+import { POLA_GATE_SUCCESS as polaSuccess } from '../data/polaGateSuccess.js'
 
 /**
  * Gate status, from published data only.
@@ -15,10 +16,14 @@ import { POLB_GATE_CALENDAR as calendar } from '../data/polbGateCalendar.js'
  *   Closed, or TBD. TBD means the terminal has not committed yet — it is a
  *   real state, not missing data, and is reported as itself.
  *
- *   Port of Los Angeles — nothing. POLA publishes gate hours as a rendered
- *   document this project could not reach programmatically, and has no open
- *   feed. Its seven terminals therefore report UNKNOWN. They are not filled in
- *   by analogy with Long Beach, and not guessed from a "typical" schedule.
+ *   Port of Los Angeles — no gate calendar, but something better for the
+ *   congestion question: a daily per-terminal gate SUCCESS RATE, the share of
+ *   booked appointments actually fulfilled. Published free, no registration,
+ *   each weekday. It does not say when a terminal is open, so POLA terminals
+ *   still report unknown gate hours — but they are no longer silent about how
+ *   the terminal is coping.
+ *
+ *   The two ports publish different things. Neither is filled in for the other.
  *
  * What we deliberately do NOT have, and do not invent:
  *
@@ -104,4 +109,47 @@ export function shiftSummary(shifts) {
 export function calendarAgeDays(now = new Date()) {
   const captured = new Date(GATE_CAPTURED_AT)
   return Math.floor((now - captured) / 86400000)
+}
+
+
+/* ── Port of Los Angeles: daily gate success rate ───────────────────────────
+ *
+ * The share of booked truck appointments a terminal actually fulfilled. This
+ * is the one real, free, per-terminal congestion signal available for San Pedro
+ * Bay. It is not a queue length and not a turn time; do not label it as either.
+ */
+
+export const POLA_SUCCESS_SOURCE = polaSuccess.source
+export const POLA_SUCCESS_DATE = polaSuccess.dataDate
+export const POLA_SUCCESS_ALL = polaSuccess.allTerminals
+
+/** Bands for reading a success rate, from the metric's own meaning. */
+export function successBand(pct) {
+  if (pct == null) return { key: 'unknown', label: 'Unknown', color: '#94a3b8' }
+  if (pct >= 95) return { key: 'strong', label: 'Keeping up', color: '#22c55e' }
+  if (pct >= 75) return { key: 'ok', label: 'Mostly keeping up', color: '#eab308' }
+  if (pct >= 50) return { key: 'strained', label: 'Falling behind', color: '#f97316' }
+  return { key: 'severe', label: 'Badly behind', color: '#ef4444' }
+}
+
+/**
+ * Published gate success for a terminal, or an explicit unknown for Long Beach,
+ * which publishes no equivalent figure.
+ */
+export function gateSuccessFor(terminalId) {
+  const pct = polaSuccess.byTerminal[terminalId]
+  if (pct == null) {
+    return {
+      known: false,
+      reason: 'The Port of Long Beach publishes no appointment fulfilment figure',
+    }
+  }
+  return {
+    known: true,
+    pct,
+    band: successBand(pct),
+    dataDate: polaSuccess.dataDate,
+    allTerminals: polaSuccess.allTerminals,
+    meaning: polaSuccess.meaning,
+  }
 }

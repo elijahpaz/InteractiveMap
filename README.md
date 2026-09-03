@@ -52,6 +52,7 @@ routing recommendations. That code is deleted, not relabelled.
 | 13 container terminals — names, operators, piers, berths | POLA and POLB |
 | All 13 terminal boundaries | POLB `Piers` ArcGIS FeatureServer; OpenStreetMap (ODbL) |
 | Long Beach gate status — 6 terminals × 14 days × 3 shifts | [POLB gate hours](https://polb.com/port-info/gate-hours/) |
+| LA appointment fulfilment — per terminal, each weekday | [POLA Daily Fulfilled Truck Gates](https://portoflosangeles.org/business/supply-chain/trucks) |
 
 Gate status is captured verbatim: `Open`, `Closed`, or `TBD`. **`TBD` is a real
 published state** — the terminal hasn't committed to that shift yet — and is shown
@@ -59,14 +60,33 @@ as "not posted", never folded into open or closed. The capture is a snapshot wit
 a date on it, and the app refuses to answer for dates outside the window it holds
 rather than extrapolating.
 
-### Explicitly unknown
+### The two ports publish different things
 
-- **The seven Port of LA terminals have no gate status.** POLA publishes nothing
-  this project can read. They say "Gate status unknown" and are never filled in
-  by analogy with Long Beach.
-- **Gate congestion, queue lengths, wait and turn times do not appear anywhere.**
-  There is no free public measurement for San Pedro Bay. The Scorecard shows an
-  em dash for turn time rather than a figure.
+Neither is filled in for the other.
+
+- **Long Beach** publishes *whether the gate is open* — a 14-day forward calendar
+  per terminal per shift. It publishes no congestion measure.
+- **Los Angeles** publishes *how well the terminal is coping* — the share of
+  booked appointments actually fulfilled, per terminal, each weekday. It
+  publishes no gate hours.
+
+So a Long Beach terminal shows shift status and says congestion is unknown; a Los
+Angeles terminal shows fulfilment and says gate hours are unknown. On 2 September
+2026 the LA complex ran at **58%**, with WBCT at **17%** and APM at **107%** —
+that spread is exactly the signal a dispatcher wants, and it is published.
+
+`scripts/fetch_pola_gate_success.py` refreshes it. It reads only the published
+percentages, not the chart's bars, because the PDF text layer does not make the
+bar pairing unambiguous and guessing it would put invented numbers back in. If
+POLA changes the layout the script fails loudly rather than emitting something
+plausible.
+
+### Still explicitly unknown
+
+- **Queue lengths and truck turn times.** Neither port publishes these free. Turn
+  times exist in POLA's Port Optimizer Control Tower — registration is free but
+  must be done by the operator, not by this project. The Scorecard shows an em
+  dash for turn time rather than a figure.
 - **Clock times.** POLB publishes shift-level open/closed, not hours. So the app
   cannot say "the gate shuts in 20 minutes", and every feature that depended on
   that — arrival-versus-close countdowns, queue-aware routing — was removed
@@ -157,6 +177,16 @@ schedule; neither is interesting alone:
 
 Every rule reads state the app already holds — no rule needs data we don't have.
 
+## Refreshing the published data
+
+```bash
+python3 scripts/fetch_pola_gate_success.py
+```
+
+The Long Beach calendar was captured by hand from a client-rendered page and
+covers a fixed window; the app refuses to answer for dates outside it rather than
+extrapolating.
+
 ## Running it
 
 ```bash
@@ -179,6 +209,7 @@ src/
     terminals.js   the 13 container terminals — real geometry, provenance noted
     network.js     re-exports terminals; adds yards and clients (invented)
     polbGateCalendar.js  captured POLB gate calendar, verbatim
+    polaGateSuccess.js   captured POLA appointment fulfilment, generated
     corridors.js   hand-traced freeway polylines through the LA basin
     fleet.js       truck roster; each unit declares its yard/terminal/client
     equipment.js   containers and chassis

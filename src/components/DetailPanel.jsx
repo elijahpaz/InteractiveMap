@@ -3,7 +3,14 @@ import { NODES } from '../data/network.js'
 import { remainingMiles } from '../lib/geo.js'
 import { candidateMoves } from '../lib/dispatch.js'
 import { usd } from '../lib/economics.js'
-import { GATE_CAPTURED_AT, gateStatusFor, hasGateData, shiftSummary } from '../lib/gates.js'
+import {
+  GATE_CAPTURED_AT,
+  POLA_SUCCESS_DATE,
+  gateStatusFor,
+  gateSuccessFor,
+  hasGateData,
+  shiftSummary,
+} from '../lib/gates.js'
 import {
   CHASSIS_STATUS,
   CONTAINER_STATUS,
@@ -305,6 +312,7 @@ function ChassisDetail({ chassis, onSelect, onClose }) {
 
 function TerminalDetail({ terminal, inbound, dateISO, onClose }) {
   const gate = gateStatusFor(terminal.id, dateISO)
+  const success = gateSuccessFor(terminal.id)
   return (
     <>
       <Header
@@ -336,13 +344,34 @@ function TerminalDetail({ terminal, inbound, dateISO, onClose }) {
           </p>
         </div>
       ) : (
-        <div className="gateBox gateBox--unknown">
-          <p className="gateBox__title">Gate status unknown</p>
-          <p className="gateBox__note">
-            {hasGateData(terminal.id)
-              ? gate.reason
-              : 'The Port of Los Angeles publishes no gate feed this app can read. Nothing is shown rather than guessed.'}
+        <div className={`gateBox ${success.known ? '' : 'gateBox--unknown'}`}>
+          <p className="gateBox__title">
+            {success.known ? `Appointments fulfilled — ${POLA_SUCCESS_DATE}` : 'Gate status unknown'}
           </p>
+          {success.known ? (
+            <>
+              <div className="successBar" style={{ '--band': success.band.color }}>
+                <span
+                  className="successBar__fill"
+                  style={{ width: `${Math.min(100, success.pct)}%` }}
+                />
+              </div>
+              <p className="successBar__value" style={{ color: success.band.color }}>
+                {success.pct}% · {success.band.label}
+                <span> (complex-wide {success.allTerminals}%)</span>
+              </p>
+              <p className="gateBox__note">
+                Published by the Port of Los Angeles. This is the share of booked
+                appointments the terminal actually took — not a queue length or turn
+                time, neither of which is published. POLA publishes no gate hours, so
+                open/closed is unknown for this terminal.
+              </p>
+            </>
+          ) : (
+            <p className="gateBox__note">
+              {hasGateData(terminal.id) ? gate.reason : 'Nothing published for this terminal.'}
+            </p>
+          )}
         </div>
       )}
 

@@ -12,7 +12,13 @@ import {
 } from 'react-leaflet'
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
 import { HARBOR_BOUNDS, PORTS, TERMINAL_BY_ID } from '../data/terminals.js'
-import { GATE_CAPTURED_AT, gateStatusFor, shiftSummary } from '../lib/gates.js'
+import {
+  GATE_CAPTURED_AT,
+  POLA_SUCCESS_DATE,
+  gateStatusFor,
+  gateSuccessFor,
+  shiftSummary,
+} from '../lib/gates.js'
 import { spreadPosition } from '../lib/geo.js'
 import {
   chassisIcon,
@@ -181,8 +187,16 @@ export default function MapView({
           // Published gate state, or nothing. Terminals with no feed are drawn
           // in their port colour and say so — never shaded as if we knew.
           const gate = gateStatusFor(terminal.id, dateISO)
+          const success = gateSuccessFor(terminal.id)
           const portColor = PORTS[TERMINAL_BY_ID[terminal.id]?.port]?.color ?? '#f97316'
-          const fill = gate.known && !gate.anyOpen ? '#64748b' : portColor
+          // Long Beach publishes whether the gate is open; Los Angeles publishes
+          // how well it is coping. Each terminal is shaded by whichever its own
+          // port actually reports, and by port colour when neither applies.
+          const fill = gate.known && !gate.anyOpen
+            ? '#64748b'
+            : success.known
+              ? success.band.color
+              : portColor
 
           return (
             <Polygon
@@ -235,11 +249,25 @@ export default function MapView({
                         because none is published.
                       </p>
                     </>
+                  ) : success.known ? (
+                    <>
+                      <div
+                        className="gatePopup__level"
+                        style={{ '--load': success.band.color }}
+                      >
+                        <span className="gatePopup__dot" />
+                        {success.pct}% of appointments fulfilled — {success.band.label}
+                      </div>
+                      <p className="gatePopup__note">
+                        Port of LA, {POLA_SUCCESS_DATE} (complex-wide{' '}
+                        {success.allTerminals}%). This is appointment fulfilment, not
+                        a queue length or turn time — neither is published. Gate hours
+                        are not published either, so no open/closed is shown.
+                      </p>
+                    </>
                   ) : (
                     <p className="gatePopup__note gatePopup__note--unknown">
-                      Gate status unknown — {gate.reason}. The Port of Los Angeles
-                      publishes no feed this app can read, so nothing is shown rather
-                      than guessed.
+                      Nothing published for this terminal — {gate.reason}.
                     </p>
                   )}
                 </div>

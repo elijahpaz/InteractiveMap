@@ -11,7 +11,12 @@ import { useSimulation } from './hooks/useSimulation.js'
 import { isLiveContainer } from './lib/status.js'
 import { exceptionCounts, findExceptions } from './lib/exceptions.js'
 import { CONTAINER_TERMINALS } from './data/terminals.js'
-import { GATE_CAPTURED_AT, COVERAGE_END, COVERAGE_START } from './lib/gates.js'
+import {
+  COVERAGE_END,
+  COVERAGE_START,
+  GATE_CAPTURED_AT,
+  POLA_SUCCESS_DATE,
+} from './lib/gates.js'
 
 const DEFAULT_LAYERS = {
   fleet: true,
@@ -172,13 +177,13 @@ export default function App() {
         <div className="demoNotice">
           <span className="demoNotice__tag">Demo data</span>
           <p>
-            <strong>Real:</strong> the 13 terminals, their operators, berths and
-            boundaries, and Long Beach gate status — captured from the port's own
-            calendar on {GATE_CAPTURED_AT.slice(0, 10)}, covering {COVERAGE_START} to{' '}
-            {COVERAGE_END}. <strong>Simulated:</strong> the fleet, drivers,
-            containers, chassis and clients — placeholders for your own records.{' '}
-            <strong>Not shown at all:</strong> gate congestion and turn times, which
-            have no free public source, so the app says it does not know.
+            <strong>Real:</strong> the 13 terminals, operators, berths and
+            boundaries; Long Beach gate status ({COVERAGE_START}–{COVERAGE_END},
+            captured {GATE_CAPTURED_AT.slice(0, 10)}); and Los Angeles appointment
+            fulfilment ({POLA_SUCCESS_DATE}). <strong>Simulated:</strong> the fleet,
+            drivers, containers, chassis and clients — placeholders for your own
+            records. <strong>Still unknown:</strong> queue lengths and truck turn
+            times, which no port publishes free, so the app does not state them.
           </p>
           <button
             type="button"

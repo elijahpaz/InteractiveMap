@@ -1605,3 +1605,30 @@ body {
 .metric--unknown .metric__value {
   color: var(--text-faint);
 }
+
+/* Published appointment-fulfilment rate (Port of LA). */
+.successBar {
+  height: 6px;
+  margin-top: 9px;
+  background: var(--surface);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.successBar__fill {
+  display: block;
+  height: 100%;
+  background: var(--band);
+  border-radius: 999px;
+}
+
+.successBar__value {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.successBar__value span {
+  font-weight: 400;
+  color: var(--text-faint);
+}

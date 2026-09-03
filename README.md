@@ -33,6 +33,41 @@ Both are simplified with Douglas-Peucker for payload size. OSM still files three
 POLA terminals under legacy tenant names — *China Shipping* and *Yang Ming* for
 the two WBCT terminals, *Evergreen* for Everport.
 
+## Exceptions
+
+The **Alerts** tab is the point of the whole thing. Rather than showing
+conditions and leaving you to spot the conflict, `src/lib/exceptions.js` scans
+the current state and says what is about to cost money — each one clickable
+straight to its subject on the map.
+
+Rules, ordered by what they cost if missed:
+
+| Rule | Fires when |
+| --- | --- |
+| Demurrage accruing | Box past its last free day, still in the stack |
+| Last free day unreachable | LFD is today and the gate won't clear it — closed, or the estimate exceeds the time left |
+| Free time expires on a closed day | LFD falls on a weekday that terminal has no gate at all |
+| Driving to a shut gate | Truck's ETA lands after the gate closes |
+| Empty return closed | Empty due back at a terminal whose gate is shut; per diem keeps running |
+| Driver hours short | Remaining HOS won't cover this leg plus its stop |
+| Detention accruing | On site past that client's own norm |
+| Out-of-service chassis in use | A repair-flagged chassis is under a truck |
+| Chassis shortfall | More boxes waiting on a chassis than bare chassis available |
+
+The rules that pay for themselves are the ones combining two things the app
+already knew separately. Free time is in the container; gate windows are in the
+schedule; neither is interesting alone:
+
+> **Free time expires on a closed day** — TRHU3320447
+> Last free day is **Sun**, when Fenix Marine Services has no gate — next gate
+> **Mon**. Pull it before then or the charge is automatic.
+
+> **Driving to a shut gate** — Unit 127
+> S. Nguyen is 3.0 mi out from Total Terminals International, ETA 27m. Gate
+> shuts in 20m. Reroute or the trip is wasted.
+
+Every rule reads state the app already holds — no rule needs data we don't have.
+
 ## Gate hours
 
 Gate hours are a **weekly schedule**, not a string. `src/data/gateSchedules.js`
@@ -119,6 +154,7 @@ src/
     equipment.js   containers and chassis
   lib/
     congestion.js  the congestion model, and the seam to a real feed
+    exceptions.js  the rules that decide what's worth flagging
     gates.js       gate open/closed state, and whether a truck makes the window
     routing.js     composes corridors into legs and three-leg tours
     geo.js         distance, interpolation along a route, marker fan-out

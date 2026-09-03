@@ -16,7 +16,7 @@ function Kpi({ label, value, sub, tone = 'neutral', subTone, onClick }) {
   )
 }
 
-export default function KpiBar({ trucks, containers, chassis, congestion }) {
+export default function KpiBar({ trucks, containers, chassis, congestion, alertCounts }) {
   const stats = useMemo(() => {
     const active = trucks.filter((t) => TRUCK_STATUS[t.status]?.group === 'active').length
     const idle = trucks.filter((t) => t.status === 'idle').length
@@ -57,10 +57,10 @@ export default function KpiBar({ trucks, containers, chassis, congestion }) {
         tone="info"
       />
       <Kpi
-        label="Boxes at risk"
-        value={stats.atRisk}
-        sub="LFD today or passed"
-        tone={stats.atRisk > 0 ? 'danger' : 'good'}
+        label="Open exceptions"
+        value={(alertCounts?.critical ?? 0) + (alertCounts?.warning ?? 0)}
+        sub={`${alertCounts?.critical ?? 0} critical · ${stats.atRisk} boxes at risk`}
+        tone={alertCounts?.critical > 0 ? 'danger' : alertCounts?.warning > 0 ? 'warn' : 'good'}
       />
       <Kpi
         label="In detention"

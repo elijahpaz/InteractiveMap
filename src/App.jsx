@@ -9,6 +9,7 @@ import { NODES } from './data/network.js'
 import { useSimulation } from './hooks/useSimulation.js'
 import { isLiveContainer } from './lib/status.js'
 import { congestionSnapshot } from './lib/congestion.js'
+import { exceptionCounts, findExceptions } from './lib/exceptions.js'
 import { CONTAINER_TERMINALS } from './data/terminals.js'
 import { DAY_SHORT } from './data/gateSchedules.js'
 
@@ -51,6 +52,12 @@ export default function App() {
     () => congestionSnapshot(CONTAINER_TERMINALS.map((t) => t.id), Math.floor(clockMin), day),
     [Math.floor(clockMin), day] // eslint-disable-line react-hooks/exhaustive-deps
   )
+
+  const exceptions = useMemo(
+    () => findExceptions({ trucks, containers, congestion, day }),
+    [trucks, containers, congestion, day]
+  )
+  const alertCounts = useMemo(() => exceptionCounts(exceptions), [exceptions])
 
   const toggleLayer = useCallback(
     (id) => setLayers((l) => ({ ...l, [id]: !l[id] })),
@@ -150,13 +157,20 @@ export default function App() {
         </div>
       </header>
 
-      <KpiBar trucks={trucks} containers={containers} chassis={CHASSIS} congestion={congestion} />
+      <KpiBar
+        trucks={trucks}
+        containers={containers}
+        chassis={CHASSIS}
+        congestion={congestion}
+        alertCounts={alertCounts}
+      />
 
       <main className="layout">
         <Sidebar
           trucks={trucks}
           containers={containers}
           chassis={CHASSIS}
+          exceptions={exceptions}
           selected={selected}
           onSelect={select}
         />

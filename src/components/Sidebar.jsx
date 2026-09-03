@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CLIENTS, NODES, TERMINALS, YARDS } from '../data/network.js'
+import { SEVERITY } from '../lib/exceptions.js'
 import {
   CHASSIS_STATUS,
   CONTAINER_STATUS,
@@ -9,6 +10,7 @@ import {
 } from '../lib/status.js'
 
 const TABS = [
+  { id: 'alerts', label: 'Alerts' },
   { id: 'fleet', label: 'Fleet' },
   { id: 'containers', label: 'Boxes' },
   { id: 'chassis', label: 'Chassis' },
@@ -44,8 +46,8 @@ function Row({ active, onClick, accent, title, subtitle, meta, tag, tagColor }) 
   )
 }
 
-export default function Sidebar({ trucks, containers, chassis, selected, onSelect }) {
-  const [tab, setTab] = useState('fleet')
+export default function Sidebar({ trucks, containers, chassis, exceptions, selected, onSelect }) {
+  const [tab, setTab] = useState('alerts')
   const [query, setQuery] = useState('')
 
   const q = query.trim().toLowerCase()
@@ -63,7 +65,14 @@ export default function Sidebar({ trucks, containers, chassis, selected, onSelec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trucks, containers, chassis, q])
 
+  const filteredExceptions = useMemo(
+    () => (exceptions ?? []).filter((e) => match(e.title, e.kind, e.detail)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [exceptions, q]
+  )
+
   const counts = {
+    alerts: filteredExceptions.length,
     fleet: filtered.fleet.length,
     containers: filtered.containers.length,
     chassis: filtered.chassis.length,
@@ -111,6 +120,32 @@ export default function Sidebar({ trucks, containers, chassis, selected, onSelec
       </div>
 
       <div className="sidebar__list">
+        {tab === 'alerts' &&
+          filteredExceptions.map((e) => {
+            const meta = SEVERITY[e.severity]
+            const active =
+              e.subject && selected?.type === e.subject.type && selected?.id === e.subject.id
+            return (
+              <button
+                key={e.id}
+                type="button"
+                className={`alertRow ${active ? 'is-active' : ''} ${
+                  e.subject ? '' : 'is-static'
+                }`}
+                style={{ '--sev': meta.color }}
+                onClick={() => e.subject && onSelect(e.subject)}
+                disabled={!e.subject}
+              >
+                <span className="alertRow__bar" />
+                <span className="alertRow__head">
+                  <span className="alertRow__kind">{e.kind}</span>
+                  <span className="alertRow__title">{e.title}</span>
+                </span>
+                <span className="alertRow__detail">{e.detail}</span>
+              </button>
+            )
+          })}
+
         {tab === 'fleet' &&
           filtered.fleet.map((truck) => {
             const meta = TRUCK_STATUS[truck.status]
@@ -209,7 +244,13 @@ export default function Sidebar({ trucks, containers, chassis, selected, onSelec
           </>
         )}
 
-        {counts[tab] === 0 && <p className="sidebar__empty">Nothing matches “{query}”.</p>}
+        {counts[tab] === 0 && (
+          <p className="sidebar__empty">
+            {tab === 'alerts' && !q
+              ? 'No open exceptions. Everything that can move, can move.'
+              : `Nothing matches “${query}”.`}
+          </p>
+        )}
       </div>
     </aside>
   )

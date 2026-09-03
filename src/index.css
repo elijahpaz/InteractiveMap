@@ -279,7 +279,7 @@ body {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-bottom: 1px solid var(--line);
 }
 
@@ -287,10 +287,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 9px 4px;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 2px;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 10.5px;
   color: var(--text-faint);
   background: none;
   border: 0;
@@ -304,8 +305,8 @@ body {
 }
 
 .tabs__count {
-  padding: 1px 5px;
-  font-size: 10px;
+  padding: 1px 4px;
+  font-size: 9.5px;
   font-variant-numeric: tabular-nums;
   color: var(--text-faint);
   background: var(--surface-2);
@@ -1199,3 +1200,68 @@ body {
 
 .kpi__sub--danger { color: #ef4444; }
 .kpi__sub--warn { color: #f59e0b; }
+
+/* ---------------------------------------------------------------------------
+   Exceptions — the alerts list. Denser than the other rows because each one
+   carries a sentence of reasoning, not just an identifier.
+--------------------------------------------------------------------------- */
+
+.alertRow {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 9px 12px 10px 15px;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  cursor: pointer;
+}
+
+.alertRow:hover:not(.is-static) {
+  background: var(--surface-2);
+}
+
+.alertRow.is-active {
+  background: color-mix(in srgb, var(--sev) 13%, var(--surface));
+}
+
+.alertRow.is-static {
+  cursor: default;
+}
+
+.alertRow__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--sev);
+}
+
+.alertRow__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.alertRow__kind {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--sev);
+}
+
+.alertRow__title {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: var(--text-faint);
+}
+
+.alertRow__detail {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}

@@ -26,7 +26,7 @@ export const CARGONAV = {
   "source": "https://core-api.port-scih.com/v1/charts/average-terminal-gate-turn-time",
   "publisher": "Port of Long Beach — CargoNav Operations Dashboard",
   "dashboard": "https://dashboard.cargonav.polb.com/",
-  "capturedAt": "2026-09-22T18:29:26Z",
+  "capturedAt": "2026-09-23T18:50:26Z",
   "turnTime": {
     "asOf": "2026-09-21T00:00:00.000Z",
     "unit": "minutes",
@@ -58,7 +58,7 @@ export const CARGONAV = {
       }
     }
   },
-  "vesselsAtBerth": 11,
+  "vesselsAtBerth": 10,
   "importDwell": {
     "date": "2026-09-20T00:00:00.000Z",
     "d0to3": 23973,

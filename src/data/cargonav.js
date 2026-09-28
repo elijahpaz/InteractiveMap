@@ -26,7 +26,7 @@ export const CARGONAV = {
   "source": "https://core-api.port-scih.com/v1/charts/average-terminal-gate-turn-time",
   "publisher": "Port of Long Beach — CargoNav Operations Dashboard",
   "dashboard": "https://dashboard.cargonav.polb.com/",
-  "capturedAt": "2026-09-25T19:06:59Z",
+  "capturedAt": "2026-09-28T21:03:37Z",
   "turnTime": {
     "asOf": "2026-09-21T00:00:00.000Z",
     "unit": "minutes",
@@ -60,71 +60,71 @@ export const CARGONAV = {
   },
   "vesselsAtBerth": 10,
   "importDwell": {
-    "date": "2026-09-20T00:00:00.000Z",
-    "d0to3": 23973,
-    "d4to8": 6429,
-    "d9to12": 2213,
-    "d13plus": 2221
+    "date": "2026-09-27T00:00:00.000Z",
+    "d0to3": 18715,
+    "d4to8": 8106,
+    "d9to12": 1705,
+    "d13plus": 2575
   },
   "truckFlow": {
     "unit": "gate transactions",
     "meaning": "Truck moves through Long Beach gates per day, counted by the port. Complex-wide, not per terminal.",
     "days": [
       {
-        "date": "2026-09-14",
-        "loadedIn": 938,
-        "loadedOut": 4076,
-        "emptyIn": 4513,
-        "emptyOut": 287,
+        "date": "2026-09-21",
+        "loadedIn": 911,
+        "loadedOut": 4261,
+        "emptyIn": 4334,
+        "emptyOut": 307,
+        "total": 9813
+      },
+      {
+        "date": "2026-09-22",
+        "loadedIn": 1330,
+        "loadedOut": 3915,
+        "emptyIn": 4178,
+        "emptyOut": 302,
+        "total": 9725
+      },
+      {
+        "date": "2026-09-23",
+        "loadedIn": 675,
+        "loadedOut": 4489,
+        "emptyIn": 4532,
+        "emptyOut": 284,
+        "total": 9980
+      },
+      {
+        "date": "2026-09-24",
+        "loadedIn": 944,
+        "loadedOut": 4859,
+        "emptyIn": 5212,
+        "emptyOut": 173,
+        "total": 11188
+      },
+      {
+        "date": "2026-09-25",
+        "loadedIn": 1104,
+        "loadedOut": 4051,
+        "emptyIn": 4543,
+        "emptyOut": 116,
         "total": 9814
       },
       {
-        "date": "2026-09-15",
-        "loadedIn": 1219,
-        "loadedOut": 4092,
-        "emptyIn": 4163,
-        "emptyOut": 271,
-        "total": 9745
+        "date": "2026-09-26",
+        "loadedIn": 18,
+        "loadedOut": 1340,
+        "emptyIn": 1377,
+        "emptyOut": 25,
+        "total": 2760
       },
       {
-        "date": "2026-09-16",
-        "loadedIn": 632,
-        "loadedOut": 4540,
-        "emptyIn": 4147,
-        "emptyOut": 279,
-        "total": 9598
-      },
-      {
-        "date": "2026-09-17",
-        "loadedIn": 911,
-        "loadedOut": 4486,
-        "emptyIn": 4223,
-        "emptyOut": 269,
-        "total": 9889
-      },
-      {
-        "date": "2026-09-18",
-        "loadedIn": 1151,
-        "loadedOut": 4207,
-        "emptyIn": 3741,
-        "emptyOut": 204,
-        "total": 9303
-      },
-      {
-        "date": "2026-09-19",
-        "loadedIn": 7,
-        "loadedOut": 1689,
-        "emptyIn": 1434,
-        "emptyOut": 19,
-        "total": 3149
-      },
-      {
-        "date": "2026-09-20",
-        "loadedIn": 0,
-        "loadedOut": 910,
-        "emptyIn": 611,
-        "emptyOut": 2,
-        "total": 1523
+        "date": "2026-09-27",
+        "loadedIn": 1,
+        "loadedOut": 601,
+        "emptyIn": 487,
+        "emptyOut": 1,
+        "total": 1090
       }
     ]
   }

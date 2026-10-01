@@ -26,7 +26,7 @@ export const CARGONAV = {
   "source": "https://core-api.port-scih.com/v1/charts/average-terminal-gate-turn-time",
   "publisher": "Port of Long Beach — CargoNav Operations Dashboard",
   "dashboard": "https://dashboard.cargonav.polb.com/",
-  "capturedAt": "2026-09-30T19:49:00Z",
+  "capturedAt": "2026-10-01T20:05:51Z",
   "turnTime": {
     "asOf": "2026-09-21T00:00:00.000Z",
     "unit": "minutes",
@@ -58,26 +58,18 @@ export const CARGONAV = {
       }
     }
   },
-  "vesselsAtBerth": 10,
+  "vesselsAtBerth": 9,
   "importDwell": {
-    "date": "2026-09-29T00:00:00.000Z",
-    "d0to3": 22382,
-    "d4to8": 8822,
-    "d9to12": 2369,
-    "d13plus": 2431
+    "date": "2026-09-30T00:00:00.000Z",
+    "d0to3": 26044,
+    "d4to8": 6749,
+    "d9to12": 2310,
+    "d13plus": 2154
   },
   "truckFlow": {
     "unit": "gate transactions",
     "meaning": "Truck moves through Long Beach gates per day, counted by the port. Complex-wide, not per terminal.",
     "days": [
-      {
-        "date": "2026-09-23",
-        "loadedIn": 675,
-        "loadedOut": 4489,
-        "emptyIn": 4532,
-        "emptyOut": 284,
-        "total": 9980
-      },
       {
         "date": "2026-09-24",
         "loadedIn": 944,
@@ -125,6 +117,14 @@ export const CARGONAV = {
         "emptyIn": 4266,
         "emptyOut": 220,
         "total": 9169
+      },
+      {
+        "date": "2026-09-30",
+        "loadedIn": 542,
+        "loadedOut": 3466,
+        "emptyIn": 3891,
+        "emptyOut": 264,
+        "total": 8163
       }
     ]
   }

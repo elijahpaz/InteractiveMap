@@ -26,58 +26,50 @@ export const CARGONAV = {
   "source": "https://core-api.port-scih.com/v1/charts/average-terminal-gate-turn-time",
   "publisher": "Port of Long Beach — CargoNav Operations Dashboard",
   "dashboard": "https://dashboard.cargonav.polb.com/",
-  "capturedAt": "2026-10-26T20:17:42Z",
+  "capturedAt": "2026-10-27T19:48:40Z",
   "turnTime": {
-    "asOf": "2026-10-11T00:00:00.000Z",
+    "asOf": "2026-10-26T00:00:00.000Z",
     "unit": "minutes",
     "meaning": "Average time a truck spends inside the terminal gate, measured by the port. Day and night shifts reported separately.",
     "byTerminal": {
       "T-SSA-A": {
         "dayMinutes": 33,
-        "nightMinutes": 23
+        "nightMinutes": 28
       },
       "T-SSA-C": {
-        "dayMinutes": 24,
-        "nightMinutes": 22
+        "dayMinutes": 20,
+        "nightMinutes": 28
       },
       "T-LBCT": {
-        "dayMinutes": 60,
-        "nightMinutes": 71
+        "dayMinutes": 59,
+        "nightMinutes": 56
       },
       "T-ITS": {
-        "dayMinutes": 56,
-        "nightMinutes": 58
+        "dayMinutes": 55,
+        "nightMinutes": 57
       },
       "T-PCT": {
-        "dayMinutes": 54,
-        "nightMinutes": 55
+        "dayMinutes": 61,
+        "nightMinutes": 63
       },
       "T-TTI": {
-        "dayMinutes": 52,
-        "nightMinutes": 65
+        "dayMinutes": 51,
+        "nightMinutes": 61
       }
     }
   },
   "vesselsAtBerth": 11,
   "importDwell": {
-    "date": "2026-10-25T00:00:00.000Z",
-    "d0to3": 22663,
-    "d4to8": 9932,
-    "d9to12": 2778,
-    "d13plus": 2775
+    "date": "2026-10-26T00:00:00.000Z",
+    "d0to3": 24891,
+    "d4to8": 12134,
+    "d9to12": 3871,
+    "d13plus": 3062
   },
   "truckFlow": {
     "unit": "gate transactions",
     "meaning": "Truck moves through Long Beach gates per day, counted by the port. Complex-wide, not per terminal.",
     "days": [
-      {
-        "date": "2026-10-19",
-        "loadedIn": 978,
-        "loadedOut": 4083,
-        "emptyIn": 4702,
-        "emptyOut": 373,
-        "total": 10136
-      },
       {
         "date": "2026-10-20",
         "loadedIn": 1254,
@@ -125,6 +117,14 @@ export const CARGONAV = {
         "emptyIn": 616,
         "emptyOut": 4,
         "total": 1330
+      },
+      {
+        "date": "2026-10-26",
+        "loadedIn": 965,
+        "loadedOut": 4061,
+        "emptyIn": 4899,
+        "emptyOut": 254,
+        "total": 10179
       }
     ]
   }

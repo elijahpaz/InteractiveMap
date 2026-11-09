@@ -26,74 +26,50 @@ export const CARGONAV = {
   "source": "https://core-api.port-scih.com/v1/charts/average-terminal-gate-turn-time",
   "publisher": "Port of Long Beach — CargoNav Operations Dashboard",
   "dashboard": "https://dashboard.cargonav.polb.com/",
-  "capturedAt": "2026-11-06T20:41:24Z",
+  "capturedAt": "2026-11-09T23:41:27Z",
   "turnTime": {
-    "asOf": "2026-10-25T00:00:00.000Z",
+    "asOf": "2026-11-01T00:00:00.000Z",
     "unit": "minutes",
     "meaning": "Average time a truck spends inside the terminal gate, measured by the port. Day and night shifts reported separately.",
     "byTerminal": {
       "T-SSA-A": {
-        "dayMinutes": 43,
-        "nightMinutes": 33
+        "dayMinutes": 34,
+        "nightMinutes": 29
       },
       "T-SSA-C": {
         "dayMinutes": 22,
-        "nightMinutes": 30
+        "nightMinutes": 26
       },
       "T-LBCT": {
-        "dayMinutes": 42,
-        "nightMinutes": 51
+        "dayMinutes": 50,
+        "nightMinutes": 64
       },
       "T-ITS": {
-        "dayMinutes": 41,
-        "nightMinutes": 56
+        "dayMinutes": 49,
+        "nightMinutes": 54
       },
       "T-PCT": {
-        "dayMinutes": 57,
-        "nightMinutes": 49
+        "dayMinutes": 53,
+        "nightMinutes": 51
       },
       "T-TTI": {
-        "dayMinutes": 55,
-        "nightMinutes": 64
+        "dayMinutes": 53,
+        "nightMinutes": 58
       }
     }
   },
   "vesselsAtBerth": 8,
   "importDwell": {
-    "date": "2026-11-05T00:00:00.000Z",
-    "d0to3": 19871,
-    "d4to8": 8628,
-    "d9to12": 2570,
-    "d13plus": 5124
+    "date": "2026-11-08T00:00:00.000Z",
+    "d0to3": 11984,
+    "d4to8": 7818,
+    "d9to12": 2573,
+    "d13plus": 4811
   },
   "truckFlow": {
     "unit": "gate transactions",
     "meaning": "Truck moves through Long Beach gates per day, counted by the port. Complex-wide, not per terminal.",
     "days": [
-      {
-        "date": "2026-10-30",
-        "loadedIn": 914,
-        "loadedOut": 3984,
-        "emptyIn": 5086,
-        "emptyOut": 176,
-        "total": 10160
-      },
-      {
-        "date": "2026-10-31",
-        "loadedIn": 7,
-        "loadedOut": 1175,
-        "emptyIn": 1711,
-        "emptyOut": 24,
-        "total": 2917
-      },
-      {
-        "date": "2026-11-01",
-        "loadedIn": 0,
-        "loadedOut": 518,
-        "emptyIn": 646,
-        "emptyOut": 0,
-        "total": 1164
-      },
       {
         "date": "2026-11-02",
         "loadedIn": 722,
@@ -106,25 +82,49 @@ export const CARGONAV = {
         "date": "2026-11-03",
         "loadedIn": 1248,
         "loadedOut": 3411,
-        "emptyIn": 4432,
+        "emptyIn": 4433,
         "emptyOut": 197,
-        "total": 9288
+        "total": 9289
       },
       {
         "date": "2026-11-04",
-        "loadedIn": 337,
-        "loadedOut": 1694,
-        "emptyIn": 2373,
-        "emptyOut": 126,
-        "total": 4530
+        "loadedIn": 544,
+        "loadedOut": 3503,
+        "emptyIn": 4205,
+        "emptyOut": 201,
+        "total": 8453
       },
       {
         "date": "2026-11-05",
-        "loadedIn": 0,
-        "loadedOut": 0,
-        "emptyIn": 0,
-        "emptyOut": 0,
-        "total": 0
+        "loadedIn": 834,
+        "loadedOut": 3926,
+        "emptyIn": 4549,
+        "emptyOut": 221,
+        "total": 9530
+      },
+      {
+        "date": "2026-11-06",
+        "loadedIn": 1213,
+        "loadedOut": 3841,
+        "emptyIn": 4474,
+        "emptyOut": 222,
+        "total": 9750
+      },
+      {
+        "date": "2026-11-07",
+        "loadedIn": 21,
+        "loadedOut": 1181,
+        "emptyIn": 1398,
+        "emptyOut": 22,
+        "total": 2622
+      },
+      {
+        "date": "2026-11-08",
+        "loadedIn": 62,
+        "loadedOut": 393,
+        "emptyIn": 728,
+        "emptyOut": 49,
+        "total": 1232
       }
     ]
   }

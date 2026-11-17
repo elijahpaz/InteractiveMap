@@ -26,7 +26,7 @@ export const CARGONAV = {
   "source": "https://core-api.port-scih.com/v1/charts/average-terminal-gate-turn-time",
   "publisher": "Port of Long Beach — CargoNav Operations Dashboard",
   "dashboard": "https://dashboard.cargonav.polb.com/",
-  "capturedAt": "2026-11-16T23:38:31Z",
+  "capturedAt": "2026-11-17T22:45:47Z",
   "turnTime": {
     "asOf": "2026-11-08T00:00:00.000Z",
     "unit": "minutes",
@@ -58,26 +58,18 @@ export const CARGONAV = {
       }
     }
   },
-  "vesselsAtBerth": 10,
+  "vesselsAtBerth": 9,
   "importDwell": {
-    "date": "2026-11-15T00:00:00.000Z",
-    "d0to3": 26269,
-    "d4to8": 6666,
-    "d9to12": 1054,
-    "d13plus": 3946
+    "date": "2026-11-16T00:00:00.000Z",
+    "d0to3": 26410,
+    "d4to8": 11172,
+    "d9to12": 1265,
+    "d13plus": 3930
   },
   "truckFlow": {
     "unit": "gate transactions",
     "meaning": "Truck moves through Long Beach gates per day, counted by the port. Complex-wide, not per terminal.",
     "days": [
-      {
-        "date": "2026-11-09",
-        "loadedIn": 1208,
-        "loadedOut": 3156,
-        "emptyIn": 4107,
-        "emptyOut": 506,
-        "total": 8977
-      },
       {
         "date": "2026-11-10",
         "loadedIn": 1572,
@@ -104,19 +96,19 @@ export const CARGONAV = {
       },
       {
         "date": "2026-11-13",
-        "loadedIn": 434,
-        "loadedOut": 1880,
-        "emptyIn": 2306,
-        "emptyOut": 176,
-        "total": 4796
+        "loadedIn": 1105,
+        "loadedOut": 3391,
+        "emptyIn": 4072,
+        "emptyOut": 312,
+        "total": 8880
       },
       {
         "date": "2026-11-14",
-        "loadedIn": 0,
-        "loadedOut": 9,
-        "emptyIn": 121,
-        "emptyOut": 0,
-        "total": 130
+        "loadedIn": 40,
+        "loadedOut": 1003,
+        "emptyIn": 1377,
+        "emptyOut": 53,
+        "total": 2473
       },
       {
         "date": "2026-11-15",
@@ -125,6 +117,14 @@ export const CARGONAV = {
         "emptyIn": 586,
         "emptyOut": 12,
         "total": 1002
+      },
+      {
+        "date": "2026-11-16",
+        "loadedIn": 841,
+        "loadedOut": 4224,
+        "emptyIn": 4943,
+        "emptyOut": 284,
+        "total": 10292
       }
     ]
   }

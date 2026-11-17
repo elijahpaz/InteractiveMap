@@ -21,18 +21,18 @@
 export const POLA_GATE_SUCCESS = {
   "source": "https://portoflosangeles.org/getmedia/e7e35d31-c560-49fe-be52-f335412879e8/fulfilled-truck-gates",
   "publisher": "Port of Los Angeles \u2014 Daily Fulfilled Truck Gates by Terminal",
-  "dataDate": "November 13, 2026",
-  "capturedAt": "2026-11-16T23:38:33Z",
+  "dataDate": "November 16, 2026",
+  "capturedAt": "2026-11-17T22:45:49Z",
   "metric": "gateSuccessRatePct",
   "meaning": "Share of booked truck appointments actually fulfilled that day. Low means the terminal could not take the trucks booked for it. Above 100% means it processed more than its estimated capacity.",
-  "allTerminals": 51,
+  "allTerminals": 58,
   "byTerminal": {
-    "T-APM": 100,
-    "T-TRP": 84,
-    "T-EVP": 31,
-    "T-WBCT-CS": 22,
-    "T-WBCT-TIL": 22,
-    "T-FMS": 31,
-    "T-YTI": 55
+    "T-APM": 113,
+    "T-TRP": 71,
+    "T-EVP": 55,
+    "T-WBCT-CS": 46,
+    "T-WBCT-TIL": 46,
+    "T-FMS": 35,
+    "T-YTI": 54
   }
 }
